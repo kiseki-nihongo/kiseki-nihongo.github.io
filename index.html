@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KISEKI 日本語</title>
+    <!-- 修正 favicon -->
+    <link rel="icon" href="data:,">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
@@ -18,13 +20,13 @@
         <p>Loading...</p>
     </div>
 
-    <!-- Toast Notification -->
+    <!-- Toast -->
     <div id="toast" class="hidden"></div>
 
-    <!-- Main App Container -->
+    <!-- App -->
     <div id="app">
         
-        <!-- View: Login -->
+        <!-- Login -->
         <section id="view-login" class="view active">
             <div class="login-container">
                 <h1>KISEKI <small>日本語</small></h1>
@@ -34,7 +36,7 @@
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="4-digit PIN" maxlength="4">
+                    <input type="password" id="password" placeholder="PIN" maxlength="4">
                 </div>
                 <button id="btn-login" class="btn-primary">
                     <span class="material-icons">login</span> 登入
@@ -42,7 +44,7 @@
             </div>
         </section>
 
-        <!-- View: Dashboard (Grammar List) -->
+        <!-- Dashboard -->
         <section id="view-dashboard" class="view hidden">
             <header class="app-header">
                 <h2>文法列表</h2>
@@ -51,13 +53,11 @@
                 </button>
             </header>
             <div class="container">
-                <div id="grammar-list" class="grid-list">
-                    <!-- Grammar items will be injected here -->
-                </div>
+                <div id="grammar-list" class="grid-list"></div>
             </div>
         </section>
 
-        <!-- View: Learning (Grammar & Exercises) -->
+        <!-- Learning -->
         <section id="view-learning" class="view hidden">
             <header class="app-header">
                 <button id="btn-back-dashboard" class="btn-icon">
@@ -67,7 +67,7 @@
             </header>
             
             <div class="container">
-                <!-- Progress Stepper -->
+                <!-- Stepper: 修正了 data-step 與 JS 的對應 -->
                 <div class="stepper">
                     <div class="step active" data-step="explanation">解說</div>
                     <div class="step" data-step="ex-free">自由</div>
@@ -75,7 +75,7 @@
                     <div class="step" data-step="ex-qa">問答</div>
                 </div>
 
-                <!-- Step Content: Explanation -->
+                <!-- Step 1: Explanation -->
                 <div id="step-explanation" class="step-content active">
                     <div class="card">
                         <h3>文法解說</h3>
@@ -90,13 +90,13 @@
                     </button>
                 </div>
 
-                <!-- Step Content: Exercise (Template for all 3 types) -->
+                <!-- Step 2,3,4: Exercise -->
                 <div id="step-exercise" class="step-content hidden">
                     <div class="card">
                         <h3 id="ex-type-title">練習</h3>
                         <p id="ex-instruction" class="instruction">請造句</p>
                         
-                        <!-- Dynamic Hint Area -->
+                        <!-- Hint Area -->
                         <div id="ex-hint-area" class="hidden">
                             <button id="btn-get-hint" class="btn-outline">
                                 <span class="material-icons">lightbulb</span> 取得單字提示
@@ -104,7 +104,7 @@
                             <div id="hint-display" class="hint-box hidden"></div>
                         </div>
 
-                        <!-- AI Question Area -->
+                        <!-- Question Area -->
                         <div id="ex-question-area" class="question-box hidden"></div>
 
                         <textarea id="user-input" rows="3" placeholder="請在此輸入你的句子..."></textarea>
@@ -124,7 +124,6 @@
                 </div>
             </div>
         </section>
-
     </div>
 
     <script src="js/api.js"></script>

@@ -1,12 +1,12 @@
 /**
- * Main Application Logic
+ * Main Application Logic (v1.2 Fixes)
  */
 
 const App = {
     state: {
         user: null,
         currentGrammar: null,
-        currentStep: 0, 
+        currentStep: "explanation",
         currentVocabHint: null,
         currentQA: null
     },
@@ -20,7 +20,10 @@ const App = {
         document.getElementById("btn-login").addEventListener("click", () => this.handleLogin());
         document.getElementById("btn-logout").addEventListener("click", () => this.handleLogout());
         document.getElementById("btn-back-dashboard").addEventListener("click", () => this.showView("dashboard"));
-        document.querySelector(".btn-next-step").addEventListener("click", () => this.startExercise("free"));
+        
+        // 修正：下一步導向到 'ex-free'
+        document.querySelector(".btn-next-step").addEventListener("click", () => this.startExercise("ex-free"));
+        
         document.getElementById("btn-get-hint").addEventListener("click", () => this.fetchHint());
         document.getElementById("btn-verify").addEventListener("click", () => this.handleVerify());
         document.getElementById("btn-continue").addEventListener("click", () => this.nextExerciseStep());
@@ -39,19 +42,17 @@ const App = {
     async handleLogin() {
         const userIn = document.getElementById("username");
         const passIn = document.getElementById("password");
-        
         if (!userIn.value || !passIn.value) {
             API.showToast("請輸入帳號與密碼");
             return;
         }
-
         try {
             const userData = await API.login(userIn.value, passIn.value);
             this.state.user = userData;
             localStorage.setItem("kiseki_user", JSON.stringify(userData));
             this.loadDashboard();
         } catch (e) {
-            // Error handled in API
+             // Error handled in API
         }
     },
 
@@ -70,15 +71,12 @@ const App = {
         document.getElementById(`view-${viewName}`).classList.add("active");
     },
 
-    // --- Dashboard ---
-
     async loadDashboard() {
         this.showView("dashboard");
         const listContainer = document.getElementById("grammar-list");
-        listContainer.innerHTML = '<p style="text-align:center; width:100%;">載入課程中...</p>';
+        listContainer.innerHTML = '<p style="text-align:center;">載入課程中...</p>';
 
         try {
-            // 從 API 取得真實文法列表
             const grammarList = await API.getGrammarList();
             listContainer.innerHTML = "";
 
@@ -92,7 +90,6 @@ const App = {
 
             grammarList.forEach(item => {
                 const itemId = parseInt(item.id);
-                // 邏輯：如果是 Admin 則全開，否則只能開小於等於目前進度的課程
                 const isLocked = !isAdmin && (itemId > userProgress);
                 
                 const el = document.createElement("div");
@@ -102,36 +99,33 @@ const App = {
                     <h4>Lesson ${item.id}</h4>
                     <p>${item.title}</p>
                 `;
-                
                 if (!isLocked) {
                     el.style.cursor = "pointer";
                     el.onclick = () => this.loadGrammar(item.id);
                 }
-                
                 listContainer.appendChild(el);
             });
 
         } catch (e) {
-            listContainer.innerHTML = '<p>載入失敗，請重新整理。</p>';
+            listContainer.innerHTML = '<p>載入失敗。</p>';
             console.error(e);
         }
     },
-
-    // --- Grammar Learning Flow ---
 
     async loadGrammar(id) {
         try {
             const data = await API.getGrammar(id);
             this.state.currentGrammar = data;
             
+            // 修正：確保標題正確顯示
             document.getElementById("learning-title").textContent = data.title;
             
-            // 處理 AI 生成失敗時的回傳字串，確保 split 不會報錯
-            const explRaw = data.explanationCache || "暫無解說";
+            // 處理內容 (優先使用手動資料，GAS 已經處理好順序)
+            const explRaw = data.explanation;
             const explHTML = explRaw.split("||").map(p => `<p>${p}</p>`).join("");
             document.getElementById("content-explanation").innerHTML = explHTML;
 
-            const exRaw = data.examplesCache || "暫無例句||";
+            const exRaw = data.examples;
             const exHTML = exRaw.split(";").map(ex => {
                 const parts = ex.split("||");
                 return `<div style="margin-bottom:8px;"><strong>${parts[0] || ''}</strong><br><small>${parts[1] || ''}</small></div>`;
@@ -141,8 +135,8 @@ const App = {
             this.showView("learning");
             this.setStep("explanation");
 
-            const quizRaw = data.aiQuizzes || "請造句";
-            this.state.currentQA = quizRaw.split("||");
+            // 準備 Quiz
+            this.state.currentQA = data.aiQuizzes ? data.aiQuizzes.split("||") : ["請造句"];
             
         } catch (e) {
             console.error(e);
@@ -151,8 +145,12 @@ const App = {
     },
 
     setStep(stepName) {
+        // 修正：這裡的 stepName 必須對應 HTML data-step (例如 'ex-free')
+        this.state.currentStep = stepName;
+
         document.querySelectorAll(".stepper .step").forEach(el => el.classList.remove("active"));
-        document.querySelector(`.stepper .step[data-step="${stepName}"]`).classList.add("active");
+        const stepTab = document.querySelector(`.stepper .step[data-step="${stepName}"]`);
+        if (stepTab) stepTab.classList.add("active");
 
         document.querySelectorAll(".step-content").forEach(el => el.classList.add("hidden"));
         
@@ -165,19 +163,18 @@ const App = {
     },
 
     setupExerciseUI(type) {
-        const titleMap = {
-            'free': '自由造句',
-            'vocab': '指定單字造句',
-            'qa': '情境問答'
-        };
-        const instrMap = {
-            'free': '請使用本課文法，自由造出一個句子。',
-            'vocab': '請使用下方提示的單字，並結合本課文法造句。',
-            'qa': '請根據以下問題，使用本課文法回答。'
+        // type 傳入的是 'ex-free', 'ex-vocab', 'ex-qa'
+        const map = {
+            'ex-free': { title: '自由造句', instr: '請使用本課文法，自由造出一個句子。', key: 'free' },
+            'ex-vocab': { title: '指定單字造句', instr: '請使用下方提示的單字，並結合本課文法造句。', key: 'vocab' },
+            'ex-qa': { title: '情境問答', instr: '請根據以下問題，使用本課文法回答。', key: 'qa' }
         };
 
-        document.getElementById("ex-type-title").textContent = titleMap[type];
-        document.getElementById("ex-instruction").textContent = instrMap[type];
+        const config = map[type];
+        if (!config) return;
+
+        document.getElementById("ex-type-title").textContent = config.title;
+        document.getElementById("ex-instruction").textContent = config.instr;
         document.getElementById("user-input").value = "";
         document.getElementById("user-input").disabled = false;
         
@@ -194,17 +191,18 @@ const App = {
         hintDisplay.classList.add("hidden");
         hintDisplay.innerHTML = "";
 
-        if (type === 'vocab') {
+        if (type === 'ex-vocab') {
             hintArea.classList.remove("hidden");
             this.state.currentVocabHint = null; 
-        } else if (type === 'qa') {
+        } else if (type === 'ex-qa') {
             qArea.classList.remove("hidden");
             const questions = this.state.currentQA;
             const q = questions[Math.floor(Math.random() * questions.length)];
             qArea.textContent = q;
         }
 
-        this.state.currentStepType = type;
+        // 儲存目前後端需要的類型 (去除 ex- 前綴)
+        this.state.currentStepType = config.key; 
     },
 
     startExercise(type) {
@@ -234,7 +232,7 @@ const App = {
             return;
         }
 
-        const type = this.state.currentStepType;
+        const type = this.state.currentStepType; // 'free', 'vocab', 'qa'
         const grammarId = this.state.currentGrammar.id;
         const uid = this.state.user.uid;
 
@@ -267,12 +265,12 @@ const App = {
             ${result.refinedSentence ? '<small>修正：' + result.refinedSentence + '</small>' : ''}
         `;
 
-        // 如果是正確的，允許繼續；如果 AI 說錯誤，使用者可以重試
         if (result.isCorrect) {
             input.disabled = true;
             btnVerify.classList.add("hidden");
             btnContinue.classList.remove("hidden");
             
+            // Optimistic update for progress if it's the final stage (qa)
             if (this.state.currentStepType === 'qa') {
                  if (parseInt(this.state.currentGrammar.id) === parseInt(this.state.user.currentProgressId)) {
                      this.state.user.currentProgressId = parseInt(this.state.user.currentProgressId) + 1;
@@ -283,8 +281,12 @@ const App = {
     },
 
     nextExerciseStep() {
-        const flow = ['free', 'vocab', 'qa'];
-        const currentIdx = flow.indexOf(this.state.currentStepType);
+        const flow = ['ex-free', 'ex-vocab', 'ex-qa'];
+        // 找出目前在 flow 中的位置
+        // 注意：currentStepType 是 'free', 但 setStep 用 'ex-free'
+        // 我們用 state.currentStep (它存的是 'ex-free')
+        
+        const currentIdx = flow.indexOf(this.state.currentStep);
         
         if (currentIdx < flow.length - 1) {
             this.startExercise(flow[currentIdx + 1]);
