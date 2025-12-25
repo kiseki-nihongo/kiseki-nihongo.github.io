@@ -1,5 +1,5 @@
 /**
- * Main Application Logic (v1.2 Fixes)
+ * Main Application Logic (v1.8.0 Fixes)
  */
 
 const App = {
@@ -21,7 +21,6 @@ const App = {
         document.getElementById("btn-logout").addEventListener("click", () => this.handleLogout());
         document.getElementById("btn-back-dashboard").addEventListener("click", () => this.showView("dashboard"));
         
-        // 修正：下一步導向到 'ex-free'
         document.querySelector(".btn-next-step").addEventListener("click", () => this.startExercise("ex-free"));
         
         document.getElementById("btn-get-hint").addEventListener("click", () => this.fetchHint());
@@ -117,10 +116,8 @@ const App = {
             const data = await API.getGrammar(id);
             this.state.currentGrammar = data;
             
-            // 修正：確保標題正確顯示
             document.getElementById("learning-title").textContent = data.title;
             
-            // 處理內容 (優先使用手動資料，GAS 已經處理好順序)
             const explRaw = data.explanation;
             const explHTML = explRaw.split("||").map(p => `<p>${p}</p>`).join("");
             document.getElementById("content-explanation").innerHTML = explHTML;
@@ -135,7 +132,6 @@ const App = {
             this.showView("learning");
             this.setStep("explanation");
 
-            // 準備 Quiz
             this.state.currentQA = data.aiQuizzes ? data.aiQuizzes.split("||") : ["請造句"];
             
         } catch (e) {
@@ -145,7 +141,6 @@ const App = {
     },
 
     setStep(stepName) {
-        // 修正：這裡的 stepName 必須對應 HTML data-step (例如 'ex-free')
         this.state.currentStep = stepName;
 
         document.querySelectorAll(".stepper .step").forEach(el => el.classList.remove("active"));
@@ -163,11 +158,10 @@ const App = {
     },
 
     setupExerciseUI(type) {
-        // type 傳入的是 'ex-free', 'ex-vocab', 'ex-qa'
         const map = {
             'ex-free': { title: '自由造句', instr: '請使用本課文法，自由造出一個句子。', key: 'free' },
-            'ex-vocab': { title: '指定單字造句', instr: '請使用下方提示的單字，並結合本課文法造句。', key: 'vocab' },
-            'ex-qa': { title: '情境問答', instr: '請根據以下問題，使用本課文法回答。', key: 'qa' }
+            'ex-vocab': { title: '指定單字造句', instr: '請參考下方 5 個隨機單字，選擇其中單字並結合本課文法造句。', key: 'vocab' },
+            'ex-qa': { title: '情境問答', instr: '請閱讀以下日文提問，並使用本課文法回答 (全日文)。', key: 'qa' }
         };
 
         const config = map[type];
@@ -201,7 +195,6 @@ const App = {
             qArea.textContent = q;
         }
 
-        // 儲存目前後端需要的類型 (去除 ex- 前綴)
         this.state.currentStepType = config.key; 
     },
 
@@ -209,19 +202,34 @@ const App = {
         this.setStep(type);
     },
 
+    // Modified: Handle 5 words array
     async fetchHint() {
         try {
-            const vocab = await API.getVocabHint();
-            this.state.currentVocabHint = vocab;
+            const vocabList = await API.getVocabHint();
+            this.state.currentVocabHint = vocabList;
             
             const display = document.getElementById("hint-display");
-            display.innerHTML = `
-                <strong>${vocab.word}</strong> (${vocab.furigana})<br>
-                ${vocab.meaning}
-            `;
+            
+            let html = '<ul style="list-style: none; padding: 0;">';
+            const list = Array.isArray(vocabList) ? vocabList : [vocabList];
+
+            list.forEach(vocab => {
+                html += `
+                <li style="margin-bottom: 12px; border-bottom: 1px dashed #ccc; padding-bottom: 8px;">
+                    <div style="font-size: 1.1rem; color: #3f51b5;">
+                        <strong>${vocab.word}</strong> 
+                        <span style="font-size: 0.9rem; color: #666;">(${vocab.furigana})</span>
+                    </div>
+                    <div style="font-size: 0.9rem;">${vocab.meaning}</div>
+                </li>`;
+            });
+            html += '</ul>';
+
+            display.innerHTML = html;
             display.classList.remove("hidden");
         } catch (e) {
             console.error(e);
+            API.showToast("無法取得提示");
         }
     },
 
@@ -232,7 +240,7 @@ const App = {
             return;
         }
 
-        const type = this.state.currentStepType; // 'free', 'vocab', 'qa'
+        const type = this.state.currentStepType; 
         const grammarId = this.state.currentGrammar.id;
         const uid = this.state.user.uid;
 
@@ -270,7 +278,6 @@ const App = {
             btnVerify.classList.add("hidden");
             btnContinue.classList.remove("hidden");
             
-            // Optimistic update for progress if it's the final stage (qa)
             if (this.state.currentStepType === 'qa') {
                  if (parseInt(this.state.currentGrammar.id) === parseInt(this.state.user.currentProgressId)) {
                      this.state.user.currentProgressId = parseInt(this.state.user.currentProgressId) + 1;
@@ -282,10 +289,6 @@ const App = {
 
     nextExerciseStep() {
         const flow = ['ex-free', 'ex-vocab', 'ex-qa'];
-        // 找出目前在 flow 中的位置
-        // 注意：currentStepType 是 'free', 但 setStep 用 'ex-free'
-        // 我們用 state.currentStep (它存的是 'ex-free')
-        
         const currentIdx = flow.indexOf(this.state.currentStep);
         
         if (currentIdx < flow.length - 1) {
