@@ -1,304 +1,307 @@
 /**
- * KISEKI 日本語 - 前端核心邏輯
- * 包含：視窗管理、狀態管理、防重複提交機制
+ * Main Application Logic
  */
 
-// 全域狀態
-let currentUser = null;
-let currentGrammar = null;
-let selectedWords = [];
-let rephraseRemaining = 2;
+const App = {
+    state: {
+        user: null,
+        currentGrammar: null,
+        currentStep: 0, // 0: Expl, 1: Free, 2: Vocab, 3: QA
+        currentVocabHint: null,
+        currentQA: null
+    },
 
-// ------------------------------------------
-// 1. 工具函式
-// ------------------------------------------
+    init() {
+        this.bindEvents();
+        this.checkSession();
+    },
 
-function showView(viewId) {
-  // 隱藏所有視窗
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  // 顯示目標視窗
-  const target = document.getElementById(viewId);
-  if (target) {
-    target.classList.add('active');
-    window.scrollTo(0, 0);
-  }
-}
+    bindEvents() {
+        // Login
+        document.getElementById("btn-login").addEventListener("click", () => this.handleLogin());
+        
+        // Logout
+        document.getElementById("btn-logout").addEventListener("click", () => this.handleLogout());
 
-/**
- * 設定按鈕讀取狀態 (防止重複送出)
- * @param {string} btnId 按鈕 ID
- * @param {boolean} isLoading 是否正在讀取
- */
-function setBtnLoading(btnId, isLoading) {
-  const btn = document.getElementById(btnId);
-  if (!btn) return;
-  
-  if (isLoading) {
-    btn.dataset.originalText = btn.innerHTML; // 暫存原始文字
-    btn.disabled = true;
-    btn.innerHTML = '<span class="material-symbols-outlined spinner" style="width:20px;height:20px;border-width:2px;font-size:16px;">sync</span> 處理中...';
-  } else {
-    btn.disabled = false;
-    if (btn.dataset.originalText) {
-      btn.innerHTML = btn.dataset.originalText;
-    }
-  }
-}
+        // Navigation
+        document.getElementById("btn-back-dashboard").addEventListener("click", () => this.showView("dashboard"));
 
-// ------------------------------------------
-// 2. 登入流程
-// ------------------------------------------
+        // Steps
+        document.querySelector(".btn-next-step").addEventListener("click", () => this.startExercise("free"));
 
-async function handleLogin() {
-  const userInput = document.getElementById('login-user');
-  const passInput = document.getElementById('login-pass');
-  const user = userInput.value.trim();
-  const pass = passInput.value.trim();
+        // Hints
+        document.getElementById("btn-get-hint").addEventListener("click", () => this.fetchHint());
 
-  if (!user || !pass) return alert("請輸入完整的帳號與密碼");
+        // Verification
+        document.getElementById("btn-verify").addEventListener("click", () => this.handleVerify());
 
-  // 鎖定按鈕，防止重複點擊
-  setBtnLoading('btn-login', true);
+        // Continue
+        document.getElementById("btn-continue").addEventListener("click", () => this.nextExerciseStep());
+    },
 
-  try {
-    // 呼叫 GAS API (runGAS 內建會觸發全螢幕遮罩 toggleLoading)
-    const res = await runGAS('login', [user, pass]);
-
-    if (res && res.success) {
-      currentUser = res;
-      updateUserInfoUI(res);
-      await loadMenu(); // 載入目錄
-    } else {
-      alert(res ? res.msg : "登入失敗，請檢查帳號密碼");
-    }
-  } catch (e) {
-    console.error(e);
-    alert("系統連線錯誤");
-  } finally {
-    // 解除鎖定
-    setBtnLoading('btn-login', false);
-  }
-}
-
-function updateUserInfoUI(user) {
-  document.getElementById('display-username').innerHTML = 
-    `<span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;">face</span> ${user.username}`;
-  document.getElementById('user-info').style.display = 'flex';
-}
-
-// ------------------------------------------
-// 3. 目錄載入
-// ------------------------------------------
-
-async function loadMenu() {
-  const container = document.getElementById('grammar-list');
-  container.innerHTML = '<div style="text-align:center;color:#888;">載入課程列表中...</div>';
-
-  try {
-    const list = await runGAS('getMenu');
-    
-    if (!Array.isArray(list)) throw new Error("資料格式錯誤");
-
-    container.innerHTML = '';
-    list.forEach(item => {
-      // 判斷是否鎖定 (非 Admin 且 ID > 進度)
-      const isLocked = (currentUser.role !== 'Admin' && parseInt(item.id) > parseInt(currentUser.progress));
-      
-      const btn = document.createElement('button');
-      btn.className = `btn ${isLocked ? 'btn-outline' : 'btn-primary'}`;
-      btn.style.width = "100%"; 
-      btn.style.marginBottom = "12px";
-      btn.style.justifyContent = "flex-start"; // 讓文字靠左對齊較美觀
-      btn.disabled = isLocked;
-      
-      const icon = isLocked ? 'lock' : 'menu_book';
-      btn.innerHTML = `<span class="material-symbols-outlined">${icon}</span> 第 ${item.id} 課：${item.title}`;
-      
-      if (!isLocked) {
-        btn.onclick = () => startLearning(item.id);
-      }
-      container.appendChild(btn);
-    });
-    
-    showView('view-menu');
-  } catch (e) {
-    container.innerHTML = '<div style="color:var(--warning)">載入失敗，請重試</div>';
-  }
-}
-
-// ------------------------------------------
-// 4. 學習功能
-// ------------------------------------------
-
-async function startLearning(id) {
-  rephraseRemaining = 2;
-  document.getElementById('rephrase-count').innerText = rephraseRemaining;
-  
-  const data = await runGAS('getGrammarStep', [id]);
-  if (!data) return;
-
-  currentGrammar = data;
-  renderLearningUI(data);
-  
-  showView('view-learning');
-  // 重置練習狀態
-  document.getElementById('card-sorting').style.display = 'block';
-  document.getElementById('card-construction').style.display = 'none';
-  resetSentenceForm();
-}
-
-function renderLearningUI(data) {
-  document.getElementById('learn-title').innerText = data.title;
-  document.getElementById('learn-explanation').innerText = data.explanation;
-  
-  const exDiv = document.getElementById('learn-examples');
-  exDiv.innerHTML = '';
-  data.examples.forEach(ex => {
-    exDiv.innerHTML += `
-      <div style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed #eee;">
-        <div style="font-weight:bold; color:var(--primary);">${ex.jp}</div>
-        <div style="font-size:0.9em; color:#666;">${ex.tw}</div>
-      </div>`;
-  });
-
-  initSorting(data.sorting);
-}
-
-// ------------------------------------------
-// 5. 互動練習 (排序 & 造句)
-// ------------------------------------------
-
-// 初始化排序題
-function initSorting(words) {
-  const pool = document.getElementById('sorting-pool');
-  const answer = document.getElementById('sorting-answer');
-  pool.innerHTML = ''; answer.innerHTML = '';
-  selectedWords = [];
-
-  // 打亂順序顯示
-  const shuffled = [...words].sort(() => Math.random() - 0.5);
-
-  shuffled.forEach(word => {
-    const chip = document.createElement('div');
-    chip.className = 'chip'; 
-    chip.innerText = word;
-    chip.onclick = function() {
-      if (!selectedWords.includes(word)) {
-        selectedWords.push(word);
-        this.style.opacity = '0.3'; // 視覺上標示已選
-        this.style.pointerEvents = 'none';
-        renderAnswerZone(words);
-      }
-    };
-    pool.appendChild(chip);
-  });
-}
-
-// 渲染答案區
-function renderAnswerZone(originalWords) {
-  const answer = document.getElementById('sorting-answer');
-  answer.innerHTML = '';
-  selectedWords.forEach((word, idx) => {
-    const chip = document.createElement('div');
-    chip.className = 'chip';
-    chip.innerText = word;
-    chip.style.background = 'var(--primary)';
-    chip.style.color = 'white';
-    chip.onclick = () => {
-      // 取消選擇：從答案區移除，並恢復下方選項
-      selectedWords.splice(idx, 1);
-      renderAnswerZone(originalWords);
-      // 恢復 pool 中的該選項
-      Array.from(document.getElementById('sorting-pool').children).forEach(c => {
-        if (c.innerText === word) {
-          c.style.opacity = '1';
-          c.style.pointerEvents = 'auto';
+    checkSession() {
+        const storedUser = localStorage.getItem("kiseki_user");
+        if (storedUser) {
+            this.state.user = JSON.parse(storedUser);
+            this.loadDashboard();
+        } else {
+            this.showView("login");
         }
-      });
-    };
-    answer.appendChild(chip);
-  });
-}
+    },
 
-function checkSorting() {
-  if (selectedWords.length === 0) return alert("請點擊單字進行排序");
-  // 簡單驗證：這裡僅檢查是否所有詞都選了，可依需求增強邏輯
-  document.getElementById('card-sorting').style.display = 'none';
-  document.getElementById('card-construction').style.display = 'block';
-  // 自動滑動到上方
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+    async handleLogin() {
+        const userIn = document.getElementById("username");
+        const passIn = document.getElementById("password");
+        
+        if (!userIn.value || !passIn.value) {
+            API.showToast("請輸入帳號與密碼");
+            return;
+        }
 
-async function handleSubmitSentence() {
-  const input = document.getElementById('user-sentence');
-  const text = input.value.trim();
-  if (!text) return alert("請輸入造句內容");
-  
-  setBtnLoading('btn-submit', true);
-  
-  try {
-    const res = await runGAS('verifySentence', [currentUser.uid, currentGrammar.id, currentGrammar.title, text]);
-    
-    const fb = document.getElementById('sentence-feedback');
-    fb.style.display = 'flex';
-    fb.className = 'feedback ' + (res.status === 'PASS' ? 'feedback-pass' : 'feedback-fail');
-    
-    const icon = res.status === 'PASS' ? 'check_circle' : 'error';
-    fb.innerHTML = `<span class="material-symbols-outlined">${icon}</span> <span>${res.feedback}</span>`;
-    
-    if (res.status === 'PASS') {
-      currentUser.progress = Math.max(parseInt(currentUser.progress), parseInt(currentGrammar.id) + 1);
+        try {
+            const userData = await API.login(userIn.value, passIn.value);
+            this.state.user = userData;
+            localStorage.setItem("kiseki_user", JSON.stringify(userData));
+            this.loadDashboard();
+        } catch (e) {
+            // Error handled in API
+        }
+    },
+
+    handleLogout() {
+        localStorage.removeItem("kiseki_user");
+        this.state.user = null;
+        this.showView("login");
+        document.getElementById("username").value = "";
+        document.getElementById("password").value = "";
+    },
+
+    showView(viewName) {
+        document.querySelectorAll(".view").forEach(el => el.classList.remove("active", "hidden"));
+        document.querySelectorAll(".view").forEach(el => el.classList.add("hidden"));
+        document.getElementById(`view-${viewName}`).classList.remove("hidden");
+        document.getElementById(`view-${viewName}`).classList.add("active");
+    },
+
+    // --- Dashboard ---
+
+    loadDashboard() {
+        this.showView("dashboard");
+        const listContainer = document.getElementById("grammar-list");
+        listContainer.innerHTML = "";
+
+        // Since we don't have a specific API to get ALL grammar list titles yet,
+        // We will simulate a list based on User Progress or a fixed number.
+        // Assuming 10 lessons for now or infinite based on ID.
+        // In a real app, we should fetch "Grammar List" from DB.
+        
+        const totalLessons = 10; 
+        const userProgress = parseInt(this.state.user.currentProgressId) || 1;
+        const isAdmin = this.state.user.role === 'Admin';
+
+        for (let i = 1; i <= totalLessons; i++) {
+            const isLocked = !isAdmin && (i > userProgress);
+            const el = document.createElement("div");
+            el.className = `grammar-item ${isLocked ? 'locked' : ''}`;
+            el.innerHTML = `
+                <span class="material-icons">${isLocked ? 'lock' : 'lock_open'}</span>
+                <h4>文法 Lesson ${i}</h4>
+            `;
+            
+            if (!isLocked) {
+                el.style.cursor = "pointer";
+                el.onclick = () => this.loadGrammar(i);
+            }
+            
+            listContainer.appendChild(el);
+        }
+    },
+
+    // --- Grammar Learning Flow ---
+
+    async loadGrammar(id) {
+        try {
+            const data = await API.getGrammar(id);
+            this.state.currentGrammar = data;
+            
+            // Render Explanation
+            document.getElementById("learning-title").textContent = data.title;
+            
+            // Parse Cache (Separated by ||)
+            const explHTML = data.explanationCache.split("||").map(p => `<p>${p}</p>`).join("");
+            document.getElementById("content-explanation").innerHTML = explHTML;
+
+            const exHTML = data.examplesCache.split(";").map(ex => {
+                const parts = ex.split("||");
+                return `<div style="margin-bottom:8px;"><strong>${parts[0]}</strong><br><small>${parts[1] || ''}</small></div>`;
+            }).join("");
+            document.getElementById("content-examples").innerHTML = exHTML;
+
+            // Reset UI
+            this.showView("learning");
+            this.setStep("explanation");
+
+            // Prepare QA Quizzes for later
+            this.state.currentQA = data.aiQuizzes ? data.aiQuizzes.split("||") : ["請嘗試造句"];
+            
+        } catch (e) {
+            console.error(e);
+        }
+    },
+
+    setStep(stepName) {
+        // Update Stepper UI
+        document.querySelectorAll(".stepper .step").forEach(el => el.classList.remove("active"));
+        document.querySelector(`.stepper .step[data-step="${stepName}"]`).classList.add("active");
+
+        // Show Content
+        document.querySelectorAll(".step-content").forEach(el => el.classList.add("hidden"));
+        
+        if (stepName === "explanation") {
+            document.getElementById("step-explanation").classList.remove("hidden");
+        } else {
+            document.getElementById("step-exercise").classList.remove("hidden");
+            this.setupExerciseUI(stepName);
+        }
+    },
+
+    setupExerciseUI(type) {
+        const titleMap = {
+            'free': '自由造句',
+            'vocab': '指定單字造句',
+            'qa': '情境問答'
+        };
+        const instrMap = {
+            'free': '請使用本課文法，自由造出一個句子。',
+            'vocab': '請使用下方提示的單字，並結合本課文法造句。',
+            'qa': '請根據以下問題，使用本課文法回答。'
+        };
+
+        document.getElementById("ex-type-title").textContent = titleMap[type];
+        document.getElementById("ex-instruction").textContent = instrMap[type];
+        document.getElementById("user-input").value = "";
+        document.getElementById("user-input").disabled = false;
+        
+        // Reset Feedback
+        document.getElementById("feedback-area").classList.add("hidden");
+        document.getElementById("btn-verify").classList.remove("hidden");
+        document.getElementById("btn-continue").classList.add("hidden");
+
+        // Specific Elements
+        const hintArea = document.getElementById("ex-hint-area");
+        const qArea = document.getElementById("ex-question-area");
+        const hintDisplay = document.getElementById("hint-display");
+
+        hintArea.classList.add("hidden");
+        qArea.classList.add("hidden");
+        hintDisplay.classList.add("hidden");
+        hintDisplay.innerHTML = "";
+
+        if (type === 'vocab') {
+            hintArea.classList.remove("hidden");
+            this.state.currentVocabHint = null; // reset
+        } else if (type === 'qa') {
+            qArea.classList.remove("hidden");
+            // Pick a random question or sequential? Let's pick random from the cache
+            const questions = this.state.currentQA;
+            const q = questions[Math.floor(Math.random() * questions.length)];
+            qArea.textContent = q;
+        }
+
+        this.state.currentStepType = type;
+    },
+
+    startExercise(type) {
+        this.setStep(type);
+    },
+
+    async fetchHint() {
+        try {
+            const vocab = await API.getVocabHint();
+            this.state.currentVocabHint = vocab;
+            
+            const display = document.getElementById("hint-display");
+            display.innerHTML = `
+                <strong>${vocab.word}</strong> (${vocab.furigana})<br>
+                ${vocab.meaning}
+            `;
+            display.classList.remove("hidden");
+        } catch (e) {
+            console.error(e);
+        }
+    },
+
+    async handleVerify() {
+        const sentence = document.getElementById("user-input").value.trim();
+        if (!sentence) {
+            API.showToast("請輸入句子");
+            return;
+        }
+
+        const type = this.state.currentStepType;
+        const grammarId = this.state.currentGrammar.id;
+        const uid = this.state.user.uid;
+
+        try {
+            const result = await API.verifySentence(uid, grammarId, sentence, type);
+            this.renderFeedback(result);
+        } catch (e) {
+            console.error(e);
+        }
+    },
+
+    renderFeedback(result) {
+        const area = document.getElementById("feedback-area");
+        const icon = document.getElementById("feedback-icon");
+        const text = document.getElementById("feedback-text");
+        const input = document.getElementById("user-input");
+        const btnVerify = document.getElementById("btn-verify");
+        const btnContinue = document.getElementById("btn-continue");
+
+        area.classList.remove("hidden", "correct", "incorrect");
+        area.classList.add(result.isCorrect ? "correct" : "incorrect");
+
+        icon.innerHTML = result.isCorrect 
+            ? '<span class="material-icons">check_circle</span>' 
+            : '<span class="material-icons">error</span>';
+        
+        text.innerHTML = `
+            <strong>${result.isCorrect ? "正確！" : "加油！"}</strong><br>
+            ${result.feedback}<br>
+            ${result.refinedSentence ? '<small>建議：' + result.refinedSentence + '</small>' : ''}
+        `;
+
+        if (result.isCorrect) {
+            input.disabled = true;
+            btnVerify.classList.add("hidden");
+            btnContinue.classList.remove("hidden");
+            
+            // If it was the last step (QA), update local user progress to match server
+            if (this.state.currentStepType === 'qa') {
+                // Optimistically update progress
+                 if (parseInt(this.state.currentGrammar.id) === parseInt(this.state.user.currentProgressId)) {
+                     this.state.user.currentProgressId = parseInt(this.state.user.currentProgressId) + 1;
+                     localStorage.setItem("kiseki_user", JSON.stringify(this.state.user));
+                 }
+            }
+        }
+    },
+
+    nextExerciseStep() {
+        const flow = ['free', 'vocab', 'qa'];
+        const currentIdx = flow.indexOf(this.state.currentStepType);
+        
+        if (currentIdx < flow.length - 1) {
+            this.startExercise(flow[currentIdx + 1]);
+        } else {
+            // Finished all steps
+            API.showToast("恭喜完成本單元！");
+            this.loadDashboard();
+        }
     }
-  } catch(e) {
-    alert("驗證失敗，請稍後再試");
-  } finally {
-    setBtnLoading('btn-submit', false);
-  }
-}
+};
 
-// ------------------------------------------
-// 6. 輔助功能 (AI 提示等)
-// ------------------------------------------
-
-function resetSentenceForm() {
-  document.getElementById('vocab-hints').innerHTML = '';
-  document.getElementById('ai-question').style.display = 'none';
-  document.getElementById('sentence-feedback').style.display = 'none';
-  document.getElementById('user-sentence').value = '';
-}
-
-async function handleVocabHint() {
-  const btn = event.currentTarget; // 獲取點擊的按鈕
-  btn.disabled = true; // 短暫防止連點
-  
-  const v = await runGAS('getRandomVocabWithAI');
-  if (v) {
-    const chip = document.createElement('span');
-    chip.className = 'chip';
-    chip.style.borderColor = 'var(--accent)';
-    chip.style.fontSize = '0.9rem';
-    chip.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;vertical-align:text-bottom;">label</span> ${v.word} <small>(${v.meaning})</small>`;
-    document.getElementById('vocab-hints').appendChild(chip);
-  }
-  btn.disabled = false;
-}
-
-async function handleAIGuide() {
-  const qDiv = document.getElementById('ai-question');
-  qDiv.style.display = 'block';
-  qDiv.innerHTML = '<span class="material-symbols-outlined spinner" style="font-size:16px;">sync</span> Sensei 正在思考...';
-  
-  const q = await runGAS('getAIGuide', [currentGrammar.title]);
-  qDiv.innerHTML = `<strong>Sensei 提問：</strong> ${q}`;
-}
-
-async function handleRephrase() {
-  if (rephraseRemaining <= 0) return alert("已達更換上限");
-  
-  const newExp = await runGAS('getRephrasedExplanation', [currentGrammar.id]);
-  if (newExp) {
-    document.getElementById('learn-explanation').innerText = newExp;
-    rephraseRemaining--;
-    document.getElementById('rephrase-count').innerText = rephraseRemaining;
-  }
-}
+// Start App
+window.addEventListener("DOMContentLoaded", () => {
+    App.init();
+});

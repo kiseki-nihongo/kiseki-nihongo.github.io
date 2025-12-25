@@ -1,103 +1,133 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KISEKI 日本語</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@600&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KISEKI 日本語</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- 全螢幕載入動畫 -->
-  <div id="loading-screen">
-    <div class="spinner"></div>
-    <p style="margin-top:10px; color:var(--primary);">處理中...</p>
-  </div>
 
-  <header>
-    <div class="brand">KISEKI 日本語</div>
-    <div id="user-info" style="display:none; align-items: center;">
-      <span id="display-username"></span>
-      <button class="btn-outline" onclick="location.reload()" style="margin-left: 10px; padding: 5px 10px;">登出</button>
-    </div>
-  </header>
-
-  <div class="container">
-    <!-- 1. 登入視窗 -->
-    <div id="view-login" class="view active">
-      <div class="card" style="text-align: center;">
-        <h2 style="font-family: 'Noto Serif JP', serif; color: var(--primary);">奇跡の始まり</h2>
-        <p style="font-size:14px; color:#888; margin-bottom: 20px;">已是會員？請輸入帳號與網際密碼</p>
-        <div class="login-container">
-          <input type="text" id="login-user" placeholder="帳號名稱 (Username)">
-          <input type="email" id="login-email" placeholder="電子郵件 (選填)">
-          <input type="password" id="login-pass" placeholder="網際密碼 (Password)">
-          <button id="btn-login" class="btn btn-primary" onclick="handleLogin()">
-            <span class="material-symbols-outlined">login</span> 進入系統
-          </button>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner">
+            <span class="material-icons">sync</span>
         </div>
-      </div>
+        <p>Loading...</p>
     </div>
 
-    <!-- 2. 目錄視窗 -->
-    <div id="view-menu" class="view">
-      <div class="card">
-        <h3>學習目錄</h3>
-        <div id="grammar-list"></div>
-      </div>
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden"></div>
+
+    <!-- Main App Container -->
+    <div id="app">
+        
+        <!-- View: Login -->
+        <section id="view-login" class="view active">
+            <div class="login-container">
+                <h1>KISEKI <small>日本語</small></h1>
+                <div class="form-group">
+                    <label for="username">User ID</label>
+                    <input type="text" id="username" placeholder="Username">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="4-digit PIN" maxlength="4">
+                </div>
+                <button id="btn-login" class="btn-primary">
+                    <span class="material-icons">login</span> 登入
+                </button>
+            </div>
+        </section>
+
+        <!-- View: Dashboard (Grammar List) -->
+        <section id="view-dashboard" class="view hidden">
+            <header class="app-header">
+                <h2>文法列表</h2>
+                <button id="btn-logout" class="btn-icon">
+                    <span class="material-icons">logout</span>
+                </button>
+            </header>
+            <div class="container">
+                <div id="grammar-list" class="grid-list">
+                    <!-- Grammar items will be injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- View: Learning (Grammar & Exercises) -->
+        <section id="view-learning" class="view hidden">
+            <header class="app-header">
+                <button id="btn-back-dashboard" class="btn-icon">
+                    <span class="material-icons">arrow_back</span>
+                </button>
+                <h2 id="learning-title">文法學習</h2>
+            </header>
+            
+            <div class="container">
+                <!-- Progress Stepper -->
+                <div class="stepper">
+                    <div class="step active" data-step="explanation">解說</div>
+                    <div class="step" data-step="ex-free">自由</div>
+                    <div class="step" data-step="ex-vocab">提示</div>
+                    <div class="step" data-step="ex-qa">問答</div>
+                </div>
+
+                <!-- Step Content: Explanation -->
+                <div id="step-explanation" class="step-content active">
+                    <div class="card">
+                        <h3>文法解說</h3>
+                        <div id="content-explanation" class="text-content"></div>
+                    </div>
+                    <div class="card">
+                        <h3>例句</h3>
+                        <div id="content-examples" class="text-content"></div>
+                    </div>
+                    <button class="btn-primary btn-next-step">
+                        開始練習 <span class="material-icons">arrow_forward</span>
+                    </button>
+                </div>
+
+                <!-- Step Content: Exercise (Template for all 3 types) -->
+                <div id="step-exercise" class="step-content hidden">
+                    <div class="card">
+                        <h3 id="ex-type-title">練習</h3>
+                        <p id="ex-instruction" class="instruction">請造句</p>
+                        
+                        <!-- Dynamic Hint Area -->
+                        <div id="ex-hint-area" class="hidden">
+                            <button id="btn-get-hint" class="btn-outline">
+                                <span class="material-icons">lightbulb</span> 取得單字提示
+                            </button>
+                            <div id="hint-display" class="hint-box hidden"></div>
+                        </div>
+
+                        <!-- AI Question Area -->
+                        <div id="ex-question-area" class="question-box hidden"></div>
+
+                        <textarea id="user-input" rows="3" placeholder="請在此輸入你的句子..."></textarea>
+                    </div>
+
+                    <div id="feedback-area" class="feedback-card hidden">
+                        <div id="feedback-icon"></div>
+                        <div id="feedback-text"></div>
+                    </div>
+
+                    <button id="btn-verify" class="btn-primary">
+                        <span class="material-icons">check</span> 檢查
+                    </button>
+                    <button id="btn-continue" class="btn-secondary hidden">
+                        下一題 <span class="material-icons">arrow_forward</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
     </div>
 
-    <!-- 3. 學習練習視窗 (修正：補齊此部分) -->
-    <div id="view-learning" class="view">
-      <button class="btn-outline" onclick="showView('view-menu')" style="margin-bottom: 15px;">
-        <span class="material-symbols-outlined">arrow_back</span> 返回目錄
-      </button>
-      
-      <!-- 文法說明卡 -->
-      <div class="card">
-        <div class="grammar-title" id="learn-title"></div>
-        <p id="learn-explanation"></p>
-        <div style="text-align: right;">
-          <button class="btn-outline" style="font-size: 12px;" onclick="handleRephrase()">
-            <span class="material-symbols-outlined">refresh</span> 換個說法 (<span id="rephrase-count">2</span>)
-          </button>
-        </div>
-        <div id="learn-examples"></div>
-      </div>
-
-      <!-- 排序練習卡 (Step 1) -->
-      <div id="card-sorting" class="card">
-        <h4 style="margin-top:0;">第一階段：語順練習</h4>
-        <div id="sorting-pool" class="chip-container"></div>
-        <div id="sorting-answer" class="chip-container" style="background: #f0f0f0;"></div>
-        <button class="btn btn-primary" style="width: 100%;" onclick="checkSorting()">
-          <span class="material-symbols-outlined">check</span> 驗證排序
-        </button>
-      </div>
-
-      <!-- 造句練習卡 (Step 2) -->
-      <div id="card-construction" class="card" style="display:none;">
-        <h4 style="margin-top:0;">第二階段：自主造句</h4>
-        <div id="vocab-hints" style="margin-bottom: 15px; display: flex; gap: 8px; flex-wrap: wrap;"></div>
-        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-          <button class="btn-outline" onclick="handleVocabHint()">
-            <span class="material-symbols-outlined">lightbulb</span> 單詞靈感
-          </button>
-          <button class="btn-outline" onclick="handleAIGuide()">
-            <span class="material-symbols-outlined">help</span> 老師提問
-          </button>
-        </div>
-        <div id="ai-question" style="margin-bottom: 15px; font-weight: bold; color: var(--success); display: none; padding: 10px; border: 1px solid var(--success); border-radius: 8px;"></div>
-        <textarea id="user-sentence" rows="3" placeholder="請活用該文法輸入日文..."></textarea>
-        <div id="sentence-feedback" class="feedback" style="display:none;"></div>
-        <button id="btn-submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="handleSubmitSentence()">
-          <span class="material-symbols-outlined">send</span> 提交審核
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <script src="js/api.js"></script>
-  <script src="js/app.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
