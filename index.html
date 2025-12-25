@@ -7,7 +7,18 @@
   
   <!-- 字體引入 -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600&display=swap" rel="stylesheet">
-  
+  <script>
+    // 替換成你剛剛部署後取得的 GAS 網址
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxiAQGwpoTZPnY4JpH3jChcjF8OFpspY56y0utigwZ6o3OZIdy8-L8ea4nBLDMq6bSA/exec"; 
+
+async function runGAS(functionName, args = []) {
+  const response = await fetch(GAS_URL, {
+    method: "POST",
+    body: JSON.stringify({ functionName, args })
+  });
+  // GAS 執行後通常會重定向，fetch 會自動處理
+  return await response.json();
+}
   <style>
     :root {
       --primary: #2C3E50;      /* 深縹色 - 專業穩定 */
@@ -201,30 +212,29 @@
   }
 
   // 登入
-  function handleLogin() {
-    const user = document.getElementById('login-user').value;
-    const pass = document.getElementById('login-pass').value;
-    const btn = document.getElementById('btn-login');
-    btn.disabled = true; btn.innerText = "驗證中...";
+// 改成現在的寫法 (有效)
+function handleLogin() {
+  const user = document.getElementById('login-user').value;
+  const pass = document.getElementById('login-pass').value;
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true; btn.innerText = "驗證中...";
 
-    google.script.run.withSuccessHandler(res => {
-      if(res.success) {
-        currentUser = res;
-        document.getElementById('display-username').innerText = "學習者：" + res.uid;
-        document.getElementById('user-info').style.display = 'block';
-        loadMenu();
-      } else {
-        alert(res.msg);
-        btn.disabled = false; btn.innerText = "進入系統";
-      }
-    }).login(user, pass);
-  }
-
-  // 載入目錄
-  function loadMenu() {
-    google.script.run.withSuccessHandler(list => {
-      const container = document.getElementById('grammar-list');
-      container.innerHTML = '';
+  runGAS('login', [user, pass]).then(res => {
+    if(res.success) {
+      currentUser = res;
+      document.getElementById('display-username').innerText = "學習者：" + res.uid;
+      document.getElementById('user-info').style.display = 'block';
+      loadMenu();
+    } else {
+      alert(res.msg);
+      btn.disabled = false; btn.innerText = "進入系統";
+    }
+  });
+}
+ function loadMenu() {
+  runGAS('getMenu').then(list => {
+    const container = document.getElementById('grammar-list');
+    container.innerHTML = '';
       list.forEach(item => {
         const isLocked = (currentUser.role !== 'Admin' && item.id > currentUser.progress);
         const btn = document.createElement('button');
