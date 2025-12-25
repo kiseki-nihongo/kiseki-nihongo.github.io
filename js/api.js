@@ -1,29 +1,50 @@
 /**
- * API Handler (v3.0 - Lazy Load Support)
+ * API Handler (v3.1 - With Safety Timeout)
  */
 const API_URL = "https://script.google.com/macros/s/AKfycbxiAQGwpoTZPnY4JpH3jChcjF8OFpspY56y0utigwZ6o3OZIdy8-L8ea4nBLDMq6bSA/exec";
 
 const API = {
+    // 儲存 Timeout ID 以便清除
+    timeoutId: null,
+
     async post(action, payload = {}) {
-        // 若是 background 請求 (allowGeneration=true 且不是 forceRegen)，可以不顯示全螢幕遮罩? 
-        // 這裡維持簡單邏輯：只要呼叫就顯示遮罩，但我們在 app.js 控制是否呼叫
-        // 為了優化體驗，如果是 'getGrammar' 且 allowGeneration=false (快速讀取)，我們顯示遮罩
-        // 如果是背景生成，我們可能不希望全螢幕遮罩，但 GAS 是同步的，所以還是會 block。
-        // 不過因為 allowGen=false 很快，遮罩只會閃一下。
-        
+        // 顯示遮罩
         API.showLoading(true);
+        
         try {
             const body = JSON.stringify({ action, ...payload });
-            const response = await fetch(API_URL, { method: "POST", body: body });
-            if (!response.ok) throw new Error("Network response was not ok");
+            
+            // 設定 Fetch
+            const response = await fetch(API_URL, { 
+                method: "POST", 
+                body: body 
+                // GAS 不支援 AbortController 的 timeout，所以我們依賴前端的 UI Timeout
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`Network Error (${response.status}): ${text}`);
+            }
+            
             const json = await response.json();
-            if (json.status === "error") throw new Error(json.message);
+            
+            if (json.status === "error") {
+                throw new Error(json.message);
+            }
+            
             return json.data;
+
         } catch (error) {
             console.error("API Error:", error);
-            API.showToast("Error: " + error.message);
+            // 顯示更友善的錯誤訊息
+            let msg = error.message;
+            if (msg.includes("Failed to fetch")) msg = "網路連線失敗，請檢查網路";
+            if (msg.includes("JSON")) msg = "伺服器回應格式錯誤";
+            
+            API.showToast("錯誤: " + msg);
             throw error;
         } finally {
+            // 無論成功失敗，務必關閉遮罩
             API.showLoading(false);
         }
     },
@@ -34,7 +55,6 @@ const API = {
 
     getGrammarList() { return API.post("getGrammarList"); },
 
-    // 更新：加入 allowGeneration (預設 false) 與 forceRegen
     getGrammar(grammarId, allowGeneration = false, forceRegen = false) {
         return API.post("getGrammar", { grammarId, allowGeneration, forceRegen });
     },
@@ -47,7 +67,22 @@ const API = {
 
     showLoading(isLoading) {
         const overlay = document.getElementById("loading-overlay");
-        if (overlay) isLoading ? overlay.classList.remove("hidden") : overlay.classList.add("hidden");
+        if (!overlay) return;
+
+        if (isLoading) {
+            overlay.classList.remove("hidden");
+            // 安全機制：10秒後強制關閉，避免卡死
+            if (API.timeoutId) clearTimeout(API.timeoutId);
+            API.timeoutId = setTimeout(() => {
+                if (!overlay.classList.contains("hidden")) {
+                    overlay.classList.add("hidden");
+                    API.showToast("回應時間過長，已取消等待");
+                }
+            }, 10000); // 10秒
+        } else {
+            overlay.classList.add("hidden");
+            if (API.timeoutId) clearTimeout(API.timeoutId);
+        }
     },
 
     showToast(msg) {
