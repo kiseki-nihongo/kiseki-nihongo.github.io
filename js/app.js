@@ -1,5 +1,5 @@
 /**
- * Main Application Logic (v2.0)
+ * Main Application Logic (v3.0 - Lazy Loading)
  */
 const App = {
     state: {
@@ -19,12 +19,8 @@ const App = {
         document.getElementById("btn-login").addEventListener("click", () => this.handleLogin());
         document.getElementById("btn-logout").addEventListener("click", () => this.handleLogout());
         document.getElementById("btn-back-dashboard").addEventListener("click", () => this.showView("dashboard"));
-        
         document.querySelector(".btn-next-step").addEventListener("click", () => this.startExercise("ex-free"));
-        
-        // 換個說法按鈕
         document.getElementById("btn-regen-expl").addEventListener("click", () => this.handleRegenExplanation());
-
         document.getElementById("btn-get-hint").addEventListener("click", () => this.fetchHint());
         document.getElementById("btn-verify").addEventListener("click", () => this.handleVerify());
         document.getElementById("btn-continue").addEventListener("click", () => this.nextExerciseStep());
@@ -40,29 +36,20 @@ const App = {
         }
     },
 
-    // 登入驗證
     async handleLogin() {
         const email = document.getElementById("email").value.trim();
         const userIn = document.getElementById("username").value.trim();
         const passIn = document.getElementById("password").value.trim();
         
-        if (!userIn || !passIn || !email) {
-            API.showToast("請完整填寫 Email、暱稱與密碼");
-            return;
-        }
-        if (passIn.length !== 4 || isNaN(passIn)) {
-            API.showToast("密碼必須為 4 位數字");
-            return;
-        }
+        if (!userIn || !passIn || !email) { API.showToast("請完整填寫"); return; }
+        if (passIn.length !== 4 || isNaN(passIn)) { API.showToast("密碼須為4位數字"); return; }
 
         try {
             const userData = await API.login(email, userIn, passIn);
             this.state.user = userData;
             localStorage.setItem("kiseki_user", JSON.stringify(userData));
             this.loadDashboard();
-        } catch (e) {
-             // Error handled in API
-        }
+        } catch (e) {}
     },
 
     handleLogout() {
@@ -112,40 +99,73 @@ const App = {
         }
     },
 
+    // 核心優化：Lazy Loading
     async loadGrammar(id, forceRegen = false) {
         try {
-            const data = await API.getGrammar(id, forceRegen);
+            // 第一步：快速讀取 (不生成)
+            // 如果是 forceRegen，則直接跳過這步，走下面的生成邏輯
+            let data;
+            if (!forceRegen) {
+                data = await API.getGrammar(id, false, false); // allowGen=false
+            }
+
+            // 如果 forceRegen 為 true，或者 第一步取回的資料為空，則需要生成
+            // 判斷是否需要背景生成
+            let needsGeneration = forceRegen;
+            if (!forceRegen && (!data.explanation || data.explanation === "")) {
+                needsGeneration = true;
+                // 若第一次取回空資料，先用假資料填充 UI，以免畫面空白
+                data.explanation = data.explanation || ""; 
+                data.examples = data.examples || "";
+            }
+
             this.state.currentGrammar = data;
+            document.getElementById("learning-title").textContent = data ? data.title : "Lesson " + id;
             
-            document.getElementById("learning-title").textContent = data.title;
-            
-            const explRaw = data.explanation;
-            const explHTML = explRaw.split("||").map(p => `<p>${p}</p>`).join("");
-            document.getElementById("content-explanation").innerHTML = explHTML;
-
-            const exRaw = data.examples;
-            const exHTML = exRaw.split(";").map(ex => {
-                const parts = ex.split("||");
-                return `<div style="margin-bottom:8px;"><strong>${parts[0] || ''}</strong><br><small>${parts[1] || ''}</small></div>`;
-            }).join("");
-            document.getElementById("content-examples").innerHTML = exHTML;
-
-            // 設置問答題
-            this.state.currentQA = data.aiQuizzes ? data.aiQuizzes.split("||") : ["請造句"];
-
             this.showView("learning");
             this.setStep("explanation");
-            
+
+            // 渲染現有內容 (可能是空的)
+            this.renderGrammarContent(data);
+
+            // 第二步：如果缺失，發起生成請求
+            if (needsGeneration) {
+                // 顯示 Loading 狀態
+                if(!data.explanation) document.getElementById("content-explanation").innerHTML = '<div class="spinner"><span class="material-icons" style="font-size:24px; animation:spin 1s infinite;">sync</span> AI 正在撰寫教材中...</div>';
+                
+                // 呼叫 API 生成 (allowGen=true)
+                const fullData = await API.getGrammar(id, true, forceRegen);
+                this.state.currentGrammar = fullData;
+                this.renderGrammarContent(fullData);
+                
+                if(forceRegen) API.showToast("教材已更新！");
+            }
+
         } catch (e) { console.error(e); }
     },
 
-    // 強制重新生成解說
+    renderGrammarContent(data) {
+        const explRaw = data.explanation || "";
+        const explHTML = explRaw ? explRaw.split("||").map(p => `<p>${p}</p>`).join("") : "";
+        
+        // 只有當真的有內容時才覆蓋 (避免把 Loading 蓋掉成空白)
+        if (explHTML) document.getElementById("content-explanation").innerHTML = explHTML;
+
+        const exRaw = data.examples || "";
+        const exHTML = exRaw ? exRaw.split(";").map(ex => {
+            const parts = ex.split("||");
+            return `<div style="margin-bottom:8px;"><strong>${parts[0] || ''}</strong><br><small>${parts[1] || ''}</small></div>`;
+        }).join("") : "";
+        if (exHTML) document.getElementById("content-examples").innerHTML = exHTML;
+
+        this.state.currentQA = (data.aiQuizzes && data.aiQuizzes !== "請嘗試造句") ? data.aiQuizzes.split("||") : ["請造句"];
+    },
+
     async handleRegenExplanation() {
-        if (!confirm("確定要請 AI 換個說法嗎？這將覆蓋現有的解說。")) return;
+        if (!confirm("確定要請 AI 換個說法嗎？")) return;
         const id = this.state.currentGrammar.id;
-        // 呼叫 API 並帶入 forceRegen = true
+        // 傳入 forceRegen = true，這會觸發 loadGrammar 裡的 needsGeneration 流程
         await this.loadGrammar(id, true);
-        API.showToast("已更新解說！");
     },
 
     setStep(stepName) {
@@ -155,8 +175,6 @@ const App = {
         if (stepTab) stepTab.classList.add("active");
 
         document.querySelectorAll(".step-content").forEach(el => el.classList.add("hidden"));
-        
-        // 控制底部按鈕區的顯示
         document.getElementById("btn-area-explanation").classList.add("hidden");
         document.getElementById("btn-area-exercise").classList.add("hidden");
 
@@ -176,7 +194,6 @@ const App = {
             'ex-vocab': { title: '指定單字造句', instr: '請點擊下方按鈕取得單字。必須使用其中一個指定單字並結合本課文法造句。', key: 'vocab' },
             'ex-qa': { title: '情境問答', instr: '請閱讀以下日文提問，並使用本課文法回答 (全日文)。', key: 'qa' }
         };
-
         const config = map[type];
         if (!config) return;
 
@@ -191,7 +208,6 @@ const App = {
 
         const hintArea = document.getElementById("ex-hint-area");
         const qArea = document.getElementById("ex-question-area");
-        
         hintArea.classList.add("hidden");
         qArea.classList.add("hidden");
         document.getElementById("hint-display").innerHTML = "";
@@ -202,10 +218,9 @@ const App = {
         } else if (type === 'ex-qa') {
             qArea.classList.remove("hidden");
             const questions = this.state.currentQA;
-            const q = questions[Math.floor(Math.random() * questions.length)];
+            const q = questions.length > 0 ? questions[Math.floor(Math.random() * questions.length)] : "請嘗試造句";
             qArea.textContent = q;
         }
-
         this.state.currentStepType = config.key; 
     },
 
