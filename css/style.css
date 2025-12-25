@@ -1,12 +1,25 @@
 :root {
-    --primary-color: #3f51b5;
-    --primary-dark: #303f9f;
-    --accent-color: #ff4081;
-    --bg-color: #f5f5f5;
-    --text-color: #333;
+    /* --- 青藍之研 (Seiran Study) Color Palette --- */
+    
+    /* 底色：胡粉色 (Gofun-iro) - 減少白光刺眼，模擬和紙 */
+    --bg-color: #F5F5F0;
+    
+    /* 主色：勝色 (Kachi-iro) - 品牌、主要按鈕 */
+    --primary-color: #1E3163;
+    --primary-dark: #152248; /* 按下時的深色 */
+    
+    /* 輔助色：若菜色 (Wakana-iro) - 進度條、完成標記 */
+    --accent-color: #8BBCCC;
+    
+    /* 強烈提示：錆青磁 (Sabi-seiji) - AI 引導、提問 */
+    --guide-color: #4E6C50;
+
+    /* 基礎設定 */
+    --text-color: #2D3436;
     --card-bg: #ffffff;
     --border-radius: 12px;
     --spacing: 16px;
+    --shadow: 0 4px 12px rgba(30, 49, 99, 0.08); /* 使用勝色作為陰影基底 */
 }
 
 * {
@@ -14,19 +27,25 @@
     margin: 0;
     padding: 0;
     font-family: 'Noto Sans JP', sans-serif;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
     font-size: 16px;
-    line-height: 1.5;
+    line-height: 1.6;
 }
 
 /* Utilities */
 .hidden { display: none !important; }
-.view { display: none; padding-bottom: 40px; }
+.view { display: none; padding-bottom: 60px; animation: fadeIn 0.3s ease; }
 .view.active { display: block; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
 /* Layout Containers */
 .container {
@@ -38,7 +57,7 @@ body {
 /* Header */
 .app-header {
     background-color: var(--primary-color);
-    color: white;
+    color: #F5F5F0; /* 使用胡粉色作為文字，對比勝色 */
     padding: var(--spacing);
     display: flex;
     align-items: center;
@@ -46,10 +65,10 @@ body {
     position: sticky;
     top: 0;
     z-index: 10;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
-.app-header h2 { font-size: 1.2rem; margin: 0; }
+.app-header h2 { font-size: 1.2rem; margin: 0; letter-spacing: 0.05em; }
 
 /* Buttons */
 button {
@@ -58,29 +77,31 @@ button {
     outline: none;
     transition: all 0.2s;
     font-family: inherit;
+    font-weight: 500;
 }
 
 button:active { transform: scale(0.96); }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .btn-primary {
-    background-color: var(--primary-color);
+    background-color: var(--primary-color); /* 勝色 */
     color: white;
     width: 100%;
-    padding: 12px;
+    padding: 14px;
     border-radius: 8px;
     font-size: 1rem;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 8px;
-    margin-top: 16px;
+    margin-top: 20px;
+    box-shadow: 0 4px 6px rgba(30, 49, 99, 0.2);
 }
 
 .btn-secondary {
     background-color: white;
     color: var(--primary-color);
-    border: 1px solid var(--primary-color);
+    border: 2px solid var(--primary-color);
     width: 100%;
     padding: 12px;
     border-radius: 8px;
@@ -93,52 +114,60 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 
 .btn-icon {
-    background: none;
+    background: rgba(255,255,255,0.1);
     color: white;
-    padding: 4px;
+    padding: 8px;
     border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-outline {
     background: transparent;
-    border: 1px solid var(--primary-color);
-    color: var(--primary-color);
+    border: 1px solid var(--guide-color); /* 錆青磁 */
+    color: var(--guide-color);
     padding: 8px 16px;
     border-radius: 20px;
     display: flex;
     align-items: center;
     gap: 4px;
     margin: 10px 0;
+    font-size: 0.9rem;
 }
 
 /* Cards & Inputs */
 .card {
     background: var(--card-bg);
-    padding: var(--spacing);
+    padding: 20px;
     border-radius: var(--border-radius);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow);
     margin-bottom: var(--spacing);
+    border: 1px solid rgba(0,0,0,0.03);
 }
 
 .card h3 {
-    margin-bottom: 12px;
+    margin-bottom: 16px;
     font-size: 1.1rem;
-    color: var(--primary-color);
-    border-left: 4px solid var(--accent-color);
-    padding-left: 8px;
+    color: var(--primary-color); /* 勝色標題 */
+    border-left: 4px solid var(--accent-color); /* 若菜色裝飾 */
+    padding-left: 12px;
 }
 
 input, textarea {
     width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
+    padding: 14px;
+    border: 2px solid #e0e0e0;
     border-radius: 8px;
     font-size: 1rem;
     margin-top: 8px;
+    background-color: #fafafa;
+    transition: border-color 0.2s;
 }
 
 input:focus, textarea:focus {
     border-color: var(--primary-color);
+    background-color: white;
     outline: none;
 }
 
@@ -149,75 +178,127 @@ input:focus, textarea:focus {
     flex-direction: column;
     justify-content: center;
     padding: 32px;
-    background: white;
+    background: var(--bg-color);
 }
-.login-container h1 { text-align: center; margin-bottom: 40px; color: var(--primary-color); }
+.login-container h1 { 
+    text-align: center; 
+    margin-bottom: 40px; 
+    color: var(--primary-color);
+    font-size: 2.5rem;
+    letter-spacing: 2px;
+}
+.login-container h1 small {
+    display: block;
+    font-size: 1rem;
+    color: var(--guide-color);
+    font-weight: normal;
+    margin-top: 5px;
+    letter-spacing: 5px;
+}
 .form-group { margin-bottom: 20px; }
+.form-group label { color: var(--primary-color); font-weight: bold; font-size: 0.9rem; }
 
 /* Dashboard Grid */
 .grid-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 16px;
 }
 
 .grammar-item {
     background: white;
-    padding: 20px;
+    padding: 24px 16px;
     border-radius: var(--border-radius);
     text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow);
     position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-bottom: 4px solid var(--accent-color); /* 若菜色底部條 */
+}
+
+.grammar-item:active { transform: scale(0.98); }
+
+.grammar-item h4 {
+    margin: 10px 0 5px;
+    color: var(--primary-color);
+}
+
+.grammar-item p {
+    font-size: 0.85rem;
+    color: #666;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
 .grammar-item.locked {
-    background: #e0e0e0;
+    background: #e6e6e6;
     color: #999;
+    border-bottom: 4px solid #ccc;
+    box-shadow: none;
 }
 
-.grammar-item.locked .material-icons {
-    color: #757575;
-}
+.grammar-item.locked h4 { color: #888; }
+.grammar-item.locked .material-icons { color: #999; }
 
-/* Stepper */
+/* Stepper - 若菜色應用於進度 */
 .stepper {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 20px;
-    background: #e0e0e0;
-    border-radius: 20px;
+    margin-bottom: 24px;
+    background: #e8e8e8;
+    border-radius: 24px;
     padding: 4px;
 }
 
 .stepper .step {
     flex: 1;
     text-align: center;
-    font-size: 0.8rem;
-    padding: 6px;
-    border-radius: 16px;
-    color: #666;
+    font-size: 0.85rem;
+    padding: 8px 4px;
+    border-radius: 20px;
+    color: #888;
+    transition: all 0.3s;
 }
 
 .stepper .step.active {
-    background: var(--primary-color);
-    color: white;
+    background: var(--accent-color); /* 若菜色 */
+    color: var(--primary-color);     /* 勝色文字，確保對比 */
     font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 /* Content Styles */
-.text-content p { margin-bottom: 8px; }
+.text-content p { margin-bottom: 12px; color: #444; }
+
+/* AI Guide / Instruction - 錆青磁 */
+.instruction {
+    color: var(--guide-color);
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.question-box {
+    font-size: 1.15rem;
+    font-weight: bold;
+    color: var(--guide-color); /* 錆青磁 */
+    margin-bottom: 16px;
+    padding: 16px;
+    background: rgba(78, 108, 80, 0.05); /* 錆青磁的淺色背景 */
+    border-radius: 8px;
+    border-left: 4px solid var(--guide-color);
+}
+
+/* Hints */
 .hint-box {
-    background: #fff3e0;
+    background: #fff;
     padding: 12px;
     border-radius: 8px;
     margin-top: 8px;
-    border-left: 4px solid #ff9800;
-}
-.question-box {
-    font-size: 1.1rem;
-    font-weight: bold;
-    margin-bottom: 12px;
+    border: 1px solid var(--accent-color);
+    color: var(--text-color);
 }
 
 /* Feedback */
@@ -228,15 +309,24 @@ input:focus, textarea:focus {
     display: flex;
     align-items: flex-start;
     gap: 12px;
+    animation: fadeIn 0.3s;
 }
-.feedback-card.correct { background: #e8f5e9; color: #2e7d32; }
-.feedback-card.incorrect { background: #ffebee; color: #c62828; }
+.feedback-card.correct { 
+    background: #E8F5E9; 
+    color: #2E7D32; 
+    border: 1px solid #C8E6C9;
+}
+.feedback-card.incorrect { 
+    background: #FFEBEE; 
+    color: #C62828; 
+    border: 1px solid #FFCDD2;
+}
 
 /* Loading Overlay */
 #loading-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(255,255,255,0.9);
+    background: rgba(245, 245, 240, 0.95); /* 胡粉色遮罩 */
     z-index: 9999;
     display: flex;
     flex-direction: column;
@@ -245,8 +335,14 @@ input:focus, textarea:focus {
 }
 .spinner .material-icons {
     font-size: 48px;
-    color: var(--primary-color);
+    color: var(--accent-color); /* 若菜色載入圈 */
     animation: spin 1s linear infinite;
+}
+#loading-overlay p {
+    margin-top: 10px;
+    color: var(--primary-color);
+    font-weight: bold;
+    letter-spacing: 1px;
 }
 
 @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -254,13 +350,14 @@ input:focus, textarea:focus {
 /* Toast */
 #toast {
     position: fixed;
-    bottom: 20px;
+    bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0,0,0,0.8);
+    background: var(--primary-color);
     color: white;
-    padding: 10px 20px;
-    border-radius: 20px;
+    padding: 12px 24px;
+    border-radius: 30px;
     z-index: 100;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
