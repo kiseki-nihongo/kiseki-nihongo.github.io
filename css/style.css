@@ -1,0 +1,49 @@
+:root {
+  --primary: #2C3E50; --accent: #FAD7DE; --bg-paper: #F9F9F7;
+  --text-main: #34495E; --success: #829079; --warning: #D9A441;
+  --shadow: 0 4px 15px rgba(0,0,0,0.05); --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 0; background-color: var(--bg-paper);
+  color: var(--text-main); font-family: 'Noto Sans JP', sans-serif;
+  line-height: 1.6; display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+}
+
+header {
+  width: 100%; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center;
+  background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.02); position: sticky; top: 0; z-index: 100;
+}
+
+.brand { font-family: 'Noto Serif JP', serif; font-size: 26px; font-weight: 700; color: var(--primary); letter-spacing: 0.15em; }
+.container { width: 100%; max-width: 800px; padding: 20px; animation: fadeIn 0.6s ease-out; }
+
+/* 卡片與動畫 */
+.card { background: white; border-radius: var(--radius); padding: 30px; box-shadow: var(--shadow); margin-bottom: 25px; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 按鈕美化與點擊回饋 */
+.btn {
+  padding: 12px 24px; border-radius: 30px; border: none; font-size: 16px; 
+  cursor: pointer; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  user-select: none;
+}
+.btn:active { transform: scale(0.95); } /* 點擊回饋動畫 */
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-primary { background: var(--primary); color: white; }
+.btn-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); }
+
+/* 語法與例句 */
+.grammar-title { font-family: 'Noto Serif JP', serif; font-size: 28px; color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
+.example-sentence { font-family: 'Noto Serif JP', serif; font-size: 20px; margin: 15px 0; padding: 12px; border-left: 4px solid var(--accent); background: rgba(250, 215, 222, 0.1); }
+
+/* Chip 樣式 */
+.chip-container { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; min-height: 60px; padding: 15px; background: #fdfdfb; border: 1px dashed #ccc; border-radius: var(--radius); }
+.chip { background: white; border: 1.5px solid var(--primary); padding: 8px 18px; border-radius: 25px; cursor: pointer; transition: 0.2s; }
+
+.view { display: none; }
+.view.active { display: block; animation: fadeIn 0.4s ease-in-out; }

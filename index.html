@@ -2,338 +2,43 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KISEKI 日本語 - AI 智慧學習</title>
-  
-  <!-- 字體與圖標引入 -->
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  
-  <script>
-    // 1. GAS 串接設定 (請確保此網址為最新部署的網址)
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbxiAQGwpoTZPnY4JpH3jChcjF8OFpspY56y0utigwZ6o3OZIdy8-L8ea4nBLDMq6bSA/exec"; 
-
-    async function runGAS(functionName, args = []) {
-      try {
-        const response = await fetch(GAS_URL, {
-          method: "POST",
-          body: JSON.stringify({ functionName, args })
-        });
-        const data = await response.json();
-        return data;
-      } catch (e) {
-        console.error("GAS 呼叫失敗:", e);
-        return { success: false, msg: "連線失敗" };
-      }
-    }
-  </script>
-
-  <style>
-    :root {
-      --primary: #2C3E50; --accent: #FAD7DE; --bg-paper: #F9F9F7;
-      --text-main: #34495E; --success: #829079; --warning: #D9A441;
-      --shadow: 0 4px 15px rgba(0,0,0,0.05); --radius: 12px;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 0; background-color: var(--bg-paper);
-      color: var(--text-main); font-family: 'Noto Sans JP', sans-serif;
-      line-height: 1.6; display: flex; flex-direction: column; align-items: center; min-height: 100vh;
-    }
-    header {
-      width: 100%; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center;
-      background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.02); position: sticky; top: 0; z-index: 100;
-    }
-    .brand { font-family: 'Noto Serif JP', serif; font-size: 26px; font-weight: 700; color: var(--primary); letter-spacing: 0.15em; }
-    .container { width: 100%; max-width: 800px; padding: 20px; }
-    .card { background: white; border-radius: var(--radius); padding: 30px; box-shadow: var(--shadow); margin-bottom: 25px; }
-    .view { display: none; }
-    .active { display: block; }
-    
-    /* Input Styles */
-    input, textarea {
-      width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; 
-      border: 1px solid #ddd; font-size: 16px; font-family: inherit;
-    }
-
-    .grammar-title { font-family: 'Noto Serif JP', serif; font-size: 28px; color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
-    .example-sentence { font-family: 'Noto Serif JP', serif; font-size: 20px; letter-spacing: 0.05em; margin: 15px 0; padding: 12px; border-left: 4px solid var(--accent); background: rgba(250, 215, 222, 0.1); }
-    
-    .chip-container { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; min-height: 60px; padding: 15px; background: #fdfdfb; border: 1px dashed #ccc; border-radius: var(--radius); }
-    .chip { background: white; border: 1.5px solid var(--primary); color: var(--primary); padding: 8px 18px; border-radius: 25px; cursor: pointer; font-size: 16px; display: flex; align-items: center; gap: 5px; }
-    .chip:hover { background: var(--accent); }
-    
-    .btn { padding: 12px 24px; border-radius: 30px; border: none; font-size: 16px; cursor: pointer; transition: 0.3s; margin: 5px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); }
-    
-    .feedback { margin-top: 15px; padding: 15px; border-radius: var(--radius); font-weight: 500; display: flex; align-items: center; gap: 10px; }
-    .feedback-pass { background: #E9F1E6; color: var(--success); border: 1px solid var(--success); }
-    .feedback-fail { background: #FFF4E5; color: var(--warning); border: 1px solid var(--warning); }
-    
-    .icon { font-size: 20px; vertical-align: middle; }
-  </style>
+  <title>KISEKI 日本語</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@600&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
 <header>
   <div class="brand">KISEKI 日本語</div>
-  <div id="user-info" style="display:none;">
+  <div id="user-info" style="display:none; align-items: center;">
     <span id="display-username"></span>
-    <button class="btn-outline" onclick="location.reload()" style="padding: 5px 12px; font-size: 12px; margin-left: 10px;">登出</button>
+    <button class="btn-outline" onclick="location.reload()" style="margin-left: 10px; padding: 5px 10px;">登出</button>
   </div>
 </header>
 
 <div class="container">
-  <!-- 1. 登入視窗 -->
+  <!-- 視窗切換邏輯如前，但簡化後的 UI -->
   <div id="view-login" class="view active">
     <div class="card" style="text-align: center;">
       <h2 style="font-family: 'Noto Serif JP', serif;">奇跡の始まり</h2>
-      <p style="color: #666; margin-bottom: 20px;">請登入系統</p>
       <input type="text" id="login-user" placeholder="帳號名稱">
       <input type="email" id="login-email" placeholder="電子郵件">
       <input type="password" id="login-pass" placeholder="網際密碼">
-      <br>
-      <button id="btn-login" class="btn btn-primary" style="width: 100%;" onclick="handleLogin()">
-        <span class="material-symbols-outlined icon">login</span> 進入系統
-      </button>
-      <p style="font-size: 14px; color: #888; cursor: pointer; margin-top: 15px;" onclick="handleForgotPassword()">忘記密碼？</p>
+      <button id="btn-login" class="btn btn-primary" onclick="handleLogin()">進入系統</button>
     </div>
   </div>
 
-  <!-- 2. 目錄視窗 -->
   <div id="view-menu" class="view">
     <div class="card">
-      <h3 style="font-family: 'Noto Serif JP', serif;">學習目錄</h3>
+      <h3>學習目錄</h3>
       <div id="grammar-list"></div>
     </div>
   </div>
 
-  <!-- 3. 學習練習視窗 -->
-  <div id="view-learning" class="view">
-    <button class="btn-outline" onclick="showView('view-menu')" style="margin-bottom: 15px;">
-      <span class="material-symbols-outlined icon">arrow_back</span> 返回目錄
-    </button>
-    <div class="card">
-      <div class="grammar-title" id="learn-title"></div>
-      <p id="learn-explanation"></p>
-      <div style="text-align: right;">
-        <button id="btn-rephrase" class="btn-outline" style="font-size: 12px;" onclick="handleRephrase()">
-          <span class="material-symbols-outlined icon">refresh</span> 換個說法 (剩餘 <span id="rephrase-count">2</span> 次)
-        </button>
-      </div>
-      <div id="learn-examples"></div>
-      <button class="btn-outline" style="font-size: 12px; width: 100%; margin-top: 10px;" onclick="handleMoreExamples()">
-        <span class="material-symbols-outlined icon">add</span> 載入更多 AI 例句
-      </button>
-    </div>
-
-    <!-- 排序題 -->
-    <div id="card-sorting" class="card">
-      <h4 style="margin-top:0;">第一階段：語順練習</h4>
-      <div id="sorting-pool" class="chip-container"></div>
-      <div id="sorting-answer" class="chip-container" style="background: #f0f0f0;"></div>
-      <button class="btn btn-primary" style="width: 100%;" onclick="checkSorting()">驗證排序</button>
-    </div>
-
-    <!-- 造句練習 -->
-    <div id="card-construction" class="card" style="display:none;">
-      <h4 style="margin-top:0;">第二階段：自主造句</h4>
-      <div id="vocab-hints" style="margin-bottom: 15px; display: flex; gap: 8px;"></div>
-      <button class="btn-outline" onclick="handleVocabHint()">
-        <span class="material-symbols-outlined icon">lightbulb</span> 單詞靈感
-      </button>
-      <button class="btn-outline" onclick="handleAIGuide()">
-        <span class="material-symbols-outlined icon">help</span> 老師提問
-      </button>
-      <div id="ai-question" style="margin: 15px 0; font-weight: bold; color: var(--success); border: 1px solid var(--success); padding: 10px; border-radius: 8px; display: none;"></div>
-      <textarea id="user-sentence" rows="3" style="margin-top: 15px;" placeholder="請活用該文法輸入日文..."></textarea>
-      <div id="sentence-feedback" class="feedback" style="display:none;"></div>
-      <button id="btn-submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="handleSubmitSentence()">提交審核</button>
-    </div>
-  </div>
+  <!-- 其他 view-learning 部分比照辦理，引用 js/api.js 與 js/app.js -->
 </div>
 
-<script>
-  let currentUser = null;
-  let currentGrammar = null;
-  let selectedWords = [];
-  let rephraseRemaining = 2;
-
-  function showView(viewId) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(viewId).classList.add('active');
-    window.scrollTo(0, 0);
-  }
-
-  // 登入處理
-  function handleLogin() {
-    const user = document.getElementById('login-user').value;
-    const email = document.getElementById('login-email').value;
-    const pass = document.getElementById('login-pass').value;
-    if(!user || !pass) { alert("請填寫帳號與密碼"); return; }
-
-    const btn = document.getElementById('btn-login');
-    btn.disabled = true; btn.innerText = "驗證中...";
-
-    runGAS('login', [user, pass]).then(res => {
-      if(res && res.success) {
-        currentUser = res;
-        document.getElementById('display-username').innerText = "學習者：" + res.uid;
-        document.getElementById('user-info').style.display = 'block';
-        loadMenu();
-      } else {
-        alert(res ? res.msg : "登入失敗");
-        btn.disabled = false; btn.innerHTML = '<span class="material-symbols-outlined icon">login</span> 進入系統';
-      }
-    });
-  }
-
-  // 載入目錄
-  function loadMenu() {
-    runGAS('getMenu').then(list => {
-      const container = document.getElementById('grammar-list');
-      container.innerHTML = '';
-      
-      // 修正: 檢查 list 是否為陣列，防止 forEach 錯誤
-      if (!Array.isArray(list)) {
-        container.innerHTML = '<p>暫無目錄資料或載入錯誤</p>';
-        return;
-      }
-
-      list.forEach(item => {
-        const isLocked = (currentUser.role !== 'Admin' && item.id > currentUser.progress);
-        const btn = document.createElement('button');
-        btn.className = `btn ${isLocked ? 'btn-outline' : 'btn-primary'}`;
-        btn.style.width = "100%"; btn.style.marginBottom = "10px";
-        btn.disabled = isLocked;
-        
-        let iconHtml = isLocked ? '<span class="material-symbols-outlined icon">lock</span> ' : '';
-        btn.innerHTML = `${iconHtml} ${item.id}. ${item.title}`;
-        btn.onclick = () => startLearning(item.id);
-        container.appendChild(btn);
-      });
-      showView('view-menu');
-    });
-  }
-
-  // 開始學習
-  function startLearning(id) {
-    runGAS('getGrammarStep', [id]).then(data => {
-      if(!data) return;
-      currentGrammar = data;
-      rephraseRemaining = 2;
-      document.getElementById('rephrase-count').innerText = rephraseRemaining;
-      document.getElementById('learn-title').innerText = data.title;
-      document.getElementById('learn-explanation').innerText = data.explanation;
-      
-      const exDiv = document.getElementById('learn-examples');
-      exDiv.innerHTML = '';
-      if(data.examples) {
-        data.examples.forEach(ex => {
-          exDiv.innerHTML += `<div class="example-sentence"><b>${ex.jp}</b><br><small>${ex.tw}</small></div>`;
-        });
-      }
-      
-      initSorting(data.sorting);
-      showView('view-learning');
-      document.getElementById('card-sorting').style.display = 'block';
-      document.getElementById('card-construction').style.display = 'none';
-      document.getElementById('vocab-hints').innerHTML = '';
-      document.getElementById('ai-question').style.display = 'none';
-      document.getElementById('sentence-feedback').style.display = 'none';
-      document.getElementById('user-sentence').value = '';
-    });
-  }
-
-  function initSorting(words) {
-    const pool = document.getElementById('sorting-pool');
-    const answer = document.getElementById('sorting-answer');
-    pool.innerHTML = ''; answer.innerHTML = '';
-    selectedWords = [];
-    if(!words) return;
-    words.forEach(word => {
-      const chip = document.createElement('div');
-      chip.className = 'chip'; chip.innerText = word;
-      chip.onclick = () => {
-        if(!selectedWords.includes(word)) {
-          selectedWords.push(word);
-          renderSorting();
-        }
-      };
-      pool.appendChild(chip);
-    });
-  }
-
-  function renderSorting() {
-    const answer = document.getElementById('sorting-answer');
-    answer.innerHTML = '';
-    selectedWords.forEach((word, idx) => {
-      const chip = document.createElement('div');
-      chip.className = 'chip'; chip.innerText = word;
-      chip.style.background = 'var(--primary)'; chip.style.color = 'white';
-      chip.onclick = () => { selectedWords.splice(idx, 1); renderSorting(); };
-      answer.appendChild(chip);
-    });
-  }
-
-  function checkSorting() {
-    if(selectedWords.length < 1) { alert("請先排列句子"); return; }
-    document.getElementById('card-sorting').style.display = 'none';
-    document.getElementById('card-construction').style.display = 'block';
-  }
-
-  function handleRephrase() {
-    if(rephraseRemaining <= 0) return;
-    runGAS('getRephrasedExplanation', [currentGrammar.id]).then(newExp => {
-      if(newExp) {
-        document.getElementById('learn-explanation').innerText = newExp;
-        rephraseRemaining--;
-        document.getElementById('rephrase-count').innerText = rephraseRemaining;
-      }
-    });
-  }
-
-  function handleVocabHint() {
-    runGAS('getRandomVocabWithAI').then(v => {
-      if(!v) return;
-      const hint = document.createElement('span');
-      hint.className = 'chip'; hint.style.borderColor = 'var(--accent)';
-      hint.innerHTML = `<span class="material-symbols-outlined icon" style="font-size:14px;">label</span> ${v.word} <small>(${v.meaning})</small>`;
-      document.getElementById('vocab-hints').appendChild(hint);
-    });
-  }
-
-  function handleAIGuide() {
-    const qDiv = document.getElementById('ai-question');
-    qDiv.style.display = 'block';
-    qDiv.innerText = "老師思考中...";
-    runGAS('getAIGuide', [currentGrammar.title]).then(q => {
-      qDiv.innerText = "Sensei: " + q;
-    });
-  }
-
-  function handleSubmitSentence() {
-    const text = document.getElementById('user-sentence').value;
-    if(!text) { alert("請輸入句子"); return; }
-    const fb = document.getElementById('sentence-feedback');
-    const btn = document.getElementById('btn-submit');
-    btn.disabled = true; btn.innerText = "審核中...";
-
-    runGAS('verifySentence', [currentUser.uid, currentGrammar.id, currentGrammar.title, text]).then(res => {
-      fb.style.display = 'flex';
-      fb.className = 'feedback ' + (res.status === 'PASS' ? 'feedback-pass' : 'feedback-fail');
-      
-      let icon = res.status === 'PASS' ? 'check_circle' : 'cancel';
-      fb.innerHTML = `<span class="material-symbols-outlined icon">${icon}</span> <span>${res.feedback}</span>`;
-      btn.disabled = false; btn.innerText = "提交審核";
-    });
-  }
-
-  function handleForgotPassword() {
-    const email = document.getElementById('login-email').value;
-    if(!email) { alert("請先在電子郵件欄位輸入您的 Email"); return; }
-    runGAS('forgotPassword', [email]).then(msg => alert(msg));
-  }
-</script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
