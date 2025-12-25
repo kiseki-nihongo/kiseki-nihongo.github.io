@@ -1,17 +1,15 @@
-// 全域變數
 let currentUser = null;
 let currentGrammar = null;
 let selectedWords = [];
-let rephraseRemaining = 2; // 確保變數在此宣告
+let rephraseRemaining = 2;
 
-// 1. 視窗切換 (使用 active class 配合動畫)
 function showView(viewId) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById(viewId).classList.add('active');
+  const target = document.getElementById(viewId);
+  if (target) target.classList.add('active');
   window.scrollTo(0, 0);
 }
 
-// 2. 登入邏輯
 async function handleLogin() {
   const user = document.getElementById('login-user').value;
   const pass = document.getElementById('login-pass').value;
@@ -28,10 +26,9 @@ async function handleLogin() {
   }
 }
 
-// 3. 目錄加載 (隱藏 ID，使用 Material Icons)
 async function loadMenu() {
   const container = document.getElementById('grammar-list');
-  container.innerHTML = '<div class="card">載入中...</div>';
+  container.innerHTML = '<div style="text-align:center; padding:20px;">載入中...</div>';
   
   const list = await runGAS('getMenu');
   if (!Array.isArray(list)) return;
@@ -45,7 +42,6 @@ async function loadMenu() {
     btn.style.marginBottom = "12px";
     btn.disabled = isLocked;
     
-    // 使用 Material Icon 替代 Emoji
     let iconHtml = isLocked ? '<span class="material-symbols-outlined icon">lock</span> ' : '';
     btn.innerHTML = `${iconHtml} ${item.title}`;
     btn.onclick = () => startLearning(item.id);
@@ -54,7 +50,6 @@ async function loadMenu() {
   showView('view-menu');
 }
 
-// 4. 開始練習 (核心邏輯)
 async function startLearning(id) {
   rephraseRemaining = 2;
   document.getElementById('rephrase-count').innerText = rephraseRemaining;
@@ -66,7 +61,6 @@ async function startLearning(id) {
   document.getElementById('learn-title').innerText = data.title;
   document.getElementById('learn-explanation').innerText = data.explanation;
   
-  // 渲染例句
   const exDiv = document.getElementById('learn-examples');
   exDiv.innerHTML = '';
   data.examples.forEach(ex => {
@@ -79,17 +73,17 @@ async function startLearning(id) {
 
   initSorting(data.sorting);
   
-  // 初始化 UI
   showView('view-learning');
   document.getElementById('card-sorting').style.display = 'block';
   document.getElementById('card-construction').style.display = 'none';
   document.getElementById('vocab-hints').innerHTML = '';
-  document.getElementById('ai-question').style.display = 'none';
+  const aiQ = document.getElementById('ai-question');
+  aiQ.style.display = 'none';
+  aiQ.innerText = '';
   document.getElementById('sentence-feedback').style.display = 'none';
   document.getElementById('user-sentence').value = '';
 }
 
-// 5. 排序題邏輯
 function initSorting(words) {
   const pool = document.getElementById('sorting-pool');
   const answer = document.getElementById('sorting-answer');
@@ -126,7 +120,6 @@ function checkSorting() {
   document.getElementById('card-construction').style.display = 'block';
 }
 
-// 6. AI 互動與審核
 async function handleVocabHint() {
   const v = await runGAS('getRandomVocabWithAI');
   if (v) {
