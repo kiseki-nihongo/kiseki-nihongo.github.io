@@ -1,16 +1,23 @@
-/* 手機優先設計 (Mobile First) */
+/* =========================================
+   1. 變數與重置 (Base & Variables)
+   ========================================= */
 :root {
   --primary: #2C3E50;
+  --primary-dark: #1a252f;
   --accent: #FAD7DE;
   --bg-paper: #F9F9F7;
   --text-main: #34495E;
+  --text-light: #888;
   --success: #829079;
   --warning: #D9A441;
   --radius: 12px;
   --shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent; /* 移除手機點擊藍框 */
+}
 
 body {
   margin: 0;
@@ -21,8 +28,14 @@ body {
   align-items: center;
   color: var(--text-main);
   min-height: 100vh;
+  line-height: 1.6;
 }
 
+/* =========================================
+   2. 組件樣式 (Components)
+   ========================================= */
+
+/* Header */
 header {
   width: 100%;
   padding: 15px 20px;
@@ -38,143 +51,25 @@ header {
 
 .brand {
   font-family: 'Noto Serif JP', serif;
-  font-size: 1.5rem;
   font-weight: 700;
-  color: var(--primary);
-  letter-spacing: 0.1em;
-}
-
-.container {
-  width: 100%;
-  max-width: 800px;
-  padding: 15px;
-}
-
-/* 視窗控制 */
-.view { display: none; }
-.view.active { 
-  display: block; 
-  animation: fadeIn 0.4s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* 卡片組件 */
-.card {
-  background: white;
-  border-radius: var(--radius);
-  padding: 25px;
-  box-shadow: var(--shadow);
-  margin-bottom: 20px;
-}
-
-/* 登入容器 */
-.login-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-}
-
-input, textarea {
-  width: 100%;
-  padding: 12px 15px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  font-size: 1rem;
-  font-family: inherit;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-input:focus { border-color: var(--primary); }
-
-/* 按鈕樣式 */
-.btn {
-  padding: 12px 20px;
-  border-radius: 30px;
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s;
-  font-weight: 500;
-}
-
-.btn-primary { background: var(--primary); color: white; }
-.btn-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); }
-.btn:active { transform: scale(0.96); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* 文法練習專用樣式 */
-.grammar-title {
-  font-family: 'Noto Serif JP', serif;
-  font-size: 1.75rem;
-  color: var(--primary);
-  border-bottom: 2px solid var(--accent);
-  padding-bottom: 8px;
-  margin-bottom: 15px;
-}
-
-.example-sentence {
-  font-family: 'Noto Serif JP', serif;
   font-size: 1.2rem;
-  margin: 12px 0;
-  padding: 10px 15px;
-  border-left: 4px solid var(--accent);
-  background: rgba(250, 215, 222, 0.1);
+  color: var(--primary);
 }
 
-.chip-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 15px;
-  background: #FDFDFB;
-  border: 1px dashed #CCC;
-  border-radius: var(--radius);
-  min-height: 60px;
-}
-
-.chip {
-  background: white;
-  border: 1.5px solid var(--primary);
-  padding: 6px 15px;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 0.95rem;
-  user-select: none;
-}
-
-/* 反饋與載入動畫 */
-.feedback {
-  margin-top: 15px;
-  padding: 12px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 500;
-}
-
-.feedback-pass { background: #E9F1E6; color: var(--success); border: 1px solid var(--success); }
-.feedback-fail { background: #FFF4E5; color: var(--warning); border: 1px solid var(--warning); }
-
+/* 載入遮罩 (Loading Mask) */
 #loading-screen {
   position: fixed;
-  inset: 0;
-  background: rgba(249, 249, 247, 0.9);
-  display: none;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(249, 249, 247, 0.95);
+  display: none; /* JS 控制開關 */
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 9999;
+  backdrop-filter: blur(5px);
 }
 
 .spinner {
@@ -183,9 +78,149 @@ input:focus { border-color: var(--primary); }
   border: 4px solid var(--accent);
   border-top: 4px solid var(--primary);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-.icon { font-size: 1.25rem; }
+/* 容器與卡片 */
+.container {
+  width: 100%;
+  max-width: 600px; /* 手機優先，限制最大寬度 */
+  padding: 15px;
+  flex: 1;
+}
+
+.card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+  transition: transform 0.2s ease;
+}
+
+.view { display: none; }
+.view.active { display: block; animation: fadeIn 0.3s ease-out; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 表單與輸入框 */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #eee;
+  border-radius: 8px;
+  font-size: 16px; /* 防止 iOS 自動縮放 */
+  transition: border-color 0.2s;
+  font-family: inherit;
+  appearance: none;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* 按鈕與動畫 */
+.btn, .btn-primary, .btn-outline {
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  min-height: 48px; /* 確保觸控熱區 */
+  touch-action: manipulation;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 6px rgba(44, 62, 80, 0.2);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.96);
+  background: var(--primary-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid #eee;
+  color: var(--text-main);
+}
+
+.btn-outline:active:not(:disabled) {
+  transform: scale(0.96);
+  background: #f5f5f5;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+/* 標籤 (Chips) */
+.chip-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 15px 0;
+  min-height: 50px;
+  padding: 10px;
+  border: 2px dashed #eee;
+  border-radius: 8px;
+}
+
+.chip {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.1s;
+}
+
+.chip:active { transform: scale(0.9); }
+
+/* 反饋訊息 */
+.feedback {
+  margin-top: 15px;
+  padding: 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: bold;
+}
+.feedback-pass { background: #E8F5E9; color: #2E7D32; }
+.feedback-fail { background: #FFEBEE; color: #C62828; }
+
+/* =========================================
+   3. 響應式調整 (Responsive)
+   ========================================= */
+@media (min-width: 768px) {
+  .container { max-width: 800px; padding: 30px; }
+  .card { padding: 40px; }
+  
+  /* 桌面版可以將登入框置中縮小 */
+  .login-container { 
+    width: 320px; 
+    margin: 0 auto; 
+  }
+}
