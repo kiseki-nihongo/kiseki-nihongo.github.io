@@ -12,12 +12,9 @@ const API = {
         try {
             const body = JSON.stringify({ action, ...payload });
             
-            // 使用 no-cors 模式會導致無法讀取回應，GAS 必須回傳正確的 CORS 標頭
-            // 這裡假設 GAS 部署設定為 "Anyone" (匿名存取)，通常能處理 CORS
             const response = await fetch(API_URL, {
                 method: "POST",
                 body: body
-                // 不設定 Content-Type 為 application/json 以避免 OPTIONS 預檢請求問題 (GAS 常見解法)
             });
 
             if (!response.ok) throw new Error("Network response was not ok");
@@ -44,6 +41,11 @@ const API = {
         return API.post("login", { username, password });
     },
 
+    // New: Get Grammar List
+    getGrammarList() {
+        return API.post("getGrammarList");
+    },
+
     // 2. Get Grammar Detail
     getGrammar(grammarId) {
         return API.post("getGrammar", { grammarId });
@@ -67,14 +69,18 @@ const API = {
     // UI Helpers
     showLoading(isLoading) {
         const overlay = document.getElementById("loading-overlay");
-        if (isLoading) overlay.classList.remove("hidden");
-        else overlay.classList.add("hidden");
+        if (overlay) {
+            if (isLoading) overlay.classList.remove("hidden");
+            else overlay.classList.add("hidden");
+        }
     },
 
     showToast(msg) {
         const toast = document.getElementById("toast");
-        toast.textContent = msg;
-        toast.classList.remove("hidden");
-        setTimeout(() => toast.classList.add("hidden"), 3000);
+        if (toast) {
+            toast.textContent = msg;
+            toast.classList.remove("hidden");
+            setTimeout(() => toast.classList.add("hidden"), 3000);
+        }
     }
 };

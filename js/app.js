@@ -6,7 +6,7 @@ const App = {
     state: {
         user: null,
         currentGrammar: null,
-        currentStep: 0, // 0: Expl, 1: Free, 2: Vocab, 3: QA
+        currentStep: 0, 
         currentVocabHint: null,
         currentQA: null
     },
@@ -17,25 +17,12 @@ const App = {
     },
 
     bindEvents() {
-        // Login
         document.getElementById("btn-login").addEventListener("click", () => this.handleLogin());
-        
-        // Logout
         document.getElementById("btn-logout").addEventListener("click", () => this.handleLogout());
-
-        // Navigation
         document.getElementById("btn-back-dashboard").addEventListener("click", () => this.showView("dashboard"));
-
-        // Steps
         document.querySelector(".btn-next-step").addEventListener("click", () => this.startExercise("free"));
-
-        // Hints
         document.getElementById("btn-get-hint").addEventListener("click", () => this.fetchHint());
-
-        // Verification
         document.getElementById("btn-verify").addEventListener("click", () => this.handleVerify());
-
-        // Continue
         document.getElementById("btn-continue").addEventListener("click", () => this.nextExerciseStep());
     },
 
@@ -85,35 +72,48 @@ const App = {
 
     // --- Dashboard ---
 
-    loadDashboard() {
+    async loadDashboard() {
         this.showView("dashboard");
         const listContainer = document.getElementById("grammar-list");
-        listContainer.innerHTML = "";
+        listContainer.innerHTML = '<p style="text-align:center; width:100%;">載入課程中...</p>';
 
-        // Since we don't have a specific API to get ALL grammar list titles yet,
-        // We will simulate a list based on User Progress or a fixed number.
-        // Assuming 10 lessons for now or infinite based on ID.
-        // In a real app, we should fetch "Grammar List" from DB.
-        
-        const totalLessons = 10; 
-        const userProgress = parseInt(this.state.user.currentProgressId) || 1;
-        const isAdmin = this.state.user.role === 'Admin';
+        try {
+            // 從 API 取得真實文法列表
+            const grammarList = await API.getGrammarList();
+            listContainer.innerHTML = "";
 
-        for (let i = 1; i <= totalLessons; i++) {
-            const isLocked = !isAdmin && (i > userProgress);
-            const el = document.createElement("div");
-            el.className = `grammar-item ${isLocked ? 'locked' : ''}`;
-            el.innerHTML = `
-                <span class="material-icons">${isLocked ? 'lock' : 'lock_open'}</span>
-                <h4>文法 Lesson ${i}</h4>
-            `;
-            
-            if (!isLocked) {
-                el.style.cursor = "pointer";
-                el.onclick = () => this.loadGrammar(i);
+            if (!grammarList || grammarList.length === 0) {
+                listContainer.innerHTML = '<p>目前沒有課程。</p>';
+                return;
             }
-            
-            listContainer.appendChild(el);
+
+            const userProgress = parseInt(this.state.user.currentProgressId) || 1;
+            const isAdmin = this.state.user.role === 'Admin';
+
+            grammarList.forEach(item => {
+                const itemId = parseInt(item.id);
+                // 邏輯：如果是 Admin 則全開，否則只能開小於等於目前進度的課程
+                const isLocked = !isAdmin && (itemId > userProgress);
+                
+                const el = document.createElement("div");
+                el.className = `grammar-item ${isLocked ? 'locked' : ''}`;
+                el.innerHTML = `
+                    <span class="material-icons">${isLocked ? 'lock' : 'lock_open'}</span>
+                    <h4>Lesson ${item.id}</h4>
+                    <p>${item.title}</p>
+                `;
+                
+                if (!isLocked) {
+                    el.style.cursor = "pointer";
+                    el.onclick = () => this.loadGrammar(item.id);
+                }
+                
+                listContainer.appendChild(el);
+            });
+
+        } catch (e) {
+            listContainer.innerHTML = '<p>載入失敗，請重新整理。</p>';
+            console.error(e);
         }
     },
 
@@ -124,37 +124,36 @@ const App = {
             const data = await API.getGrammar(id);
             this.state.currentGrammar = data;
             
-            // Render Explanation
             document.getElementById("learning-title").textContent = data.title;
             
-            // Parse Cache (Separated by ||)
-            const explHTML = data.explanationCache.split("||").map(p => `<p>${p}</p>`).join("");
+            // 處理 AI 生成失敗時的回傳字串，確保 split 不會報錯
+            const explRaw = data.explanationCache || "暫無解說";
+            const explHTML = explRaw.split("||").map(p => `<p>${p}</p>`).join("");
             document.getElementById("content-explanation").innerHTML = explHTML;
 
-            const exHTML = data.examplesCache.split(";").map(ex => {
+            const exRaw = data.examplesCache || "暫無例句||";
+            const exHTML = exRaw.split(";").map(ex => {
                 const parts = ex.split("||");
-                return `<div style="margin-bottom:8px;"><strong>${parts[0]}</strong><br><small>${parts[1] || ''}</small></div>`;
+                return `<div style="margin-bottom:8px;"><strong>${parts[0] || ''}</strong><br><small>${parts[1] || ''}</small></div>`;
             }).join("");
             document.getElementById("content-examples").innerHTML = exHTML;
 
-            // Reset UI
             this.showView("learning");
             this.setStep("explanation");
 
-            // Prepare QA Quizzes for later
-            this.state.currentQA = data.aiQuizzes ? data.aiQuizzes.split("||") : ["請嘗試造句"];
+            const quizRaw = data.aiQuizzes || "請造句";
+            this.state.currentQA = quizRaw.split("||");
             
         } catch (e) {
             console.error(e);
+            API.showToast("課程載入失敗");
         }
     },
 
     setStep(stepName) {
-        // Update Stepper UI
         document.querySelectorAll(".stepper .step").forEach(el => el.classList.remove("active"));
         document.querySelector(`.stepper .step[data-step="${stepName}"]`).classList.add("active");
 
-        // Show Content
         document.querySelectorAll(".step-content").forEach(el => el.classList.add("hidden"));
         
         if (stepName === "explanation") {
@@ -182,12 +181,10 @@ const App = {
         document.getElementById("user-input").value = "";
         document.getElementById("user-input").disabled = false;
         
-        // Reset Feedback
         document.getElementById("feedback-area").classList.add("hidden");
         document.getElementById("btn-verify").classList.remove("hidden");
         document.getElementById("btn-continue").classList.add("hidden");
 
-        // Specific Elements
         const hintArea = document.getElementById("ex-hint-area");
         const qArea = document.getElementById("ex-question-area");
         const hintDisplay = document.getElementById("hint-display");
@@ -199,10 +196,9 @@ const App = {
 
         if (type === 'vocab') {
             hintArea.classList.remove("hidden");
-            this.state.currentVocabHint = null; // reset
+            this.state.currentVocabHint = null; 
         } else if (type === 'qa') {
             qArea.classList.remove("hidden");
-            // Pick a random question or sequential? Let's pick random from the cache
             const questions = this.state.currentQA;
             const q = questions[Math.floor(Math.random() * questions.length)];
             qArea.textContent = q;
@@ -266,19 +262,18 @@ const App = {
             : '<span class="material-icons">error</span>';
         
         text.innerHTML = `
-            <strong>${result.isCorrect ? "正確！" : "加油！"}</strong><br>
+            <strong>${result.isCorrect ? "正確！" : "建議修改"}</strong><br>
             ${result.feedback}<br>
-            ${result.refinedSentence ? '<small>建議：' + result.refinedSentence + '</small>' : ''}
+            ${result.refinedSentence ? '<small>修正：' + result.refinedSentence + '</small>' : ''}
         `;
 
+        // 如果是正確的，允許繼續；如果 AI 說錯誤，使用者可以重試
         if (result.isCorrect) {
             input.disabled = true;
             btnVerify.classList.add("hidden");
             btnContinue.classList.remove("hidden");
             
-            // If it was the last step (QA), update local user progress to match server
             if (this.state.currentStepType === 'qa') {
-                // Optimistically update progress
                  if (parseInt(this.state.currentGrammar.id) === parseInt(this.state.user.currentProgressId)) {
                      this.state.user.currentProgressId = parseInt(this.state.user.currentProgressId) + 1;
                      localStorage.setItem("kiseki_user", JSON.stringify(this.state.user));
@@ -294,14 +289,12 @@ const App = {
         if (currentIdx < flow.length - 1) {
             this.startExercise(flow[currentIdx + 1]);
         } else {
-            // Finished all steps
             API.showToast("恭喜完成本單元！");
             this.loadDashboard();
         }
     }
 };
 
-// Start App
 window.addEventListener("DOMContentLoaded", () => {
     App.init();
 });
