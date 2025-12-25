@@ -2,9 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KISEKI 日本語</title>
-    <!-- 修正 favicon -->
     <link rel="icon" href="data:,">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -17,7 +16,7 @@
         <div class="spinner">
             <span class="material-icons">sync</span>
         </div>
-        <p>Loading...</p>
+        <p>處理中...</p>
     </div>
 
     <!-- Toast -->
@@ -26,95 +25,130 @@
     <!-- App -->
     <div id="app">
         
-        <!-- Login -->
+        <!-- Login View -->
         <section id="view-login" class="view active">
             <div class="login-container">
                 <h1>KISEKI <small>日本語</small></h1>
+                
                 <div class="form-group">
-                    <label for="username">User ID</label>
-                    <input type="text" id="username" placeholder="Username">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="example@mail.com">
                 </div>
+                
                 <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="PIN" maxlength="4">
+                    <label for="username">暱稱 (Nickname)</label>
+                    <input type="text" id="username" placeholder="請輸入您的暱稱">
                 </div>
+                
+                <div class="form-group">
+                    <label for="password">密碼 (4位數字)</label>
+                    <input type="tel" id="password" placeholder="****" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+                    <small style="color:var(--guide-color); display:block; margin-top:4px;">* 若無帳號將自動為您註冊</small>
+                </div>
+                
                 <button id="btn-login" class="btn-primary">
-                    <span class="material-icons">login</span> 登入
+                    <span class="material-icons">login</span> 登入 / 註冊
                 </button>
             </div>
         </section>
 
-        <!-- Dashboard -->
+        <!-- Dashboard View -->
         <section id="view-dashboard" class="view hidden">
-            <header class="app-header">
+            <header class="app-header fixed-top">
                 <h2>文法列表</h2>
                 <button id="btn-logout" class="btn-icon">
                     <span class="material-icons">logout</span>
                 </button>
             </header>
-            <div class="container">
-                <div id="grammar-list" class="grid-list"></div>
+            <div class="scroll-content">
+                <div class="container">
+                    <div id="grammar-list" class="grid-list"></div>
+                </div>
             </div>
         </section>
 
-        <!-- Learning -->
-        <section id="view-learning" class="view hidden">
-            <header class="app-header">
-                <button id="btn-back-dashboard" class="btn-icon">
-                    <span class="material-icons">arrow_back</span>
-                </button>
-                <h2 id="learning-title">文法學習</h2>
-            </header>
-            
-            <div class="container">
-                <!-- Stepper: 修正了 data-step 與 JS 的對應 -->
-                <div class="stepper">
-                    <div class="step active" data-step="explanation">解說</div>
-                    <div class="step" data-step="ex-free">自由</div>
-                    <div class="step" data-step="ex-vocab">提示</div>
-                    <div class="step" data-step="ex-qa">問答</div>
+        <!-- Learning View (Fixed Layout) -->
+        <section id="view-learning" class="view hidden learning-layout">
+            <!-- Top: Header & Stepper -->
+            <div class="fixed-top-area">
+                <header class="app-header">
+                    <button id="btn-back-dashboard" class="btn-icon">
+                        <span class="material-icons">arrow_back</span>
+                    </button>
+                    <h2 id="learning-title">文法學習</h2>
+                </header>
+                
+                <div class="stepper-container">
+                    <div class="stepper">
+                        <div class="step active" data-step="explanation">解說</div>
+                        <div class="step" data-step="ex-free">自由</div>
+                        <div class="step" data-step="ex-vocab">提示</div>
+                        <div class="step" data-step="ex-qa">問答</div>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Step 1: Explanation -->
-                <div id="step-explanation" class="step-content active">
-                    <div class="card">
-                        <h3>文法解說</h3>
-                        <div id="content-explanation" class="text-content"></div>
+            <!-- Middle: Scrollable Content -->
+            <div class="scroll-content learning-content">
+                <div class="container">
+                    <!-- Step 1: Explanation -->
+                    <div id="step-explanation" class="step-content active">
+                        <div class="card">
+                            <h3>文法解說</h3>
+                            <div id="content-explanation" class="text-content"></div>
+                        </div>
+                        <div class="card">
+                            <h3>例句</h3>
+                            <div id="content-examples" class="text-content"></div>
+                        </div>
+                        <!-- Spacer for buttons -->
+                        <div style="height: 100px;"></div>
                     </div>
-                    <div class="card">
-                        <h3>例句</h3>
-                        <div id="content-examples" class="text-content"></div>
+
+                    <!-- Step 2,3,4: Exercise -->
+                    <div id="step-exercise" class="step-content hidden">
+                        <div class="card">
+                            <h3 id="ex-type-title">練習</h3>
+                            <p id="ex-instruction" class="instruction">請造句</p>
+                            
+                            <!-- Hint Area -->
+                            <div id="ex-hint-area" class="hidden">
+                                <button id="btn-get-hint" class="btn-outline">
+                                    <span class="material-icons">lightbulb</span> 取得單字提示
+                                </button>
+                                <div id="hint-display" class="hint-box hidden"></div>
+                                <small style="display:block; margin-top:8px; color:#666; font-size:0.85rem;">* 必須使用其中一個指定單字，若無適合的單字請再點一次按鈕。</small>
+                            </div>
+
+                            <!-- Question Area -->
+                            <div id="ex-question-area" class="question-box hidden"></div>
+
+                            <textarea id="user-input" rows="3" placeholder="請在此輸入你的句子..."></textarea>
+                        </div>
+
+                        <div id="feedback-area" class="feedback-card hidden">
+                            <div id="feedback-icon"></div>
+                            <div id="feedback-text"></div>
+                        </div>
+                        
+                        <!-- Spacer -->
+                        <div style="height: 100px;"></div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Bottom: Buttons -->
+            <div class="fixed-bottom-area">
+                <div id="btn-area-explanation" class="btn-group hidden">
+                    <button id="btn-regen-expl" class="btn-secondary btn-sm">
+                        <span class="material-icons">refresh</span> 換個說法 (AI)
+                    </button>
                     <button class="btn-primary btn-next-step">
                         開始練習 <span class="material-icons">arrow_forward</span>
                     </button>
                 </div>
 
-                <!-- Step 2,3,4: Exercise -->
-                <div id="step-exercise" class="step-content hidden">
-                    <div class="card">
-                        <h3 id="ex-type-title">練習</h3>
-                        <p id="ex-instruction" class="instruction">請造句</p>
-                        
-                        <!-- Hint Area -->
-                        <div id="ex-hint-area" class="hidden">
-                            <button id="btn-get-hint" class="btn-outline">
-                                <span class="material-icons">lightbulb</span> 取得單字提示
-                            </button>
-                            <div id="hint-display" class="hint-box hidden"></div>
-                        </div>
-
-                        <!-- Question Area -->
-                        <div id="ex-question-area" class="question-box hidden"></div>
-
-                        <textarea id="user-input" rows="3" placeholder="請在此輸入你的句子..."></textarea>
-                    </div>
-
-                    <div id="feedback-area" class="feedback-card hidden">
-                        <div id="feedback-icon"></div>
-                        <div id="feedback-text"></div>
-                    </div>
-
+                <div id="btn-area-exercise" class="btn-group hidden">
                     <button id="btn-verify" class="btn-primary">
                         <span class="material-icons">check</span> 檢查
                     </button>
